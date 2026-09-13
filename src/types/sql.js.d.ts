@@ -25,7 +25,7 @@ declare module "sql.js" {
     export class Database {
         constructor(data?: ArrayLike<number> | Buffer | null);
         run(sql: string, params?: any[]): Database;
-        exec(sql: string): QueryExecResult[];
+        exec(sql: string, params?: any[]): QueryExecResult[];
         prepare(sql: string): Statement;
         export(): Uint8Array;
         close(): void;

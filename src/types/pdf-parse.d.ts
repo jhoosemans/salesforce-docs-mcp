@@ -8,6 +8,6 @@ declare module "pdf-parse" {
         version: string;
     }
 
-    function pdf(dataBuffer: Buffer, options?: any): Promise<PdfData>;
+    function pdf(dataBuffer: Buffer | Uint8Array, options?: any): Promise<PdfData>;
     export = pdf;
 }
