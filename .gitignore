@@ -44,3 +44,16 @@ scripts/test-*.ts
 # Documentation analysis (internal)
 docs/DOCUMENTATION_ANALYSIS.md
 
+
+# Corpus: PDFs are downloaded from Salesforce by scripts/sync-docs.ts and
+# regenerable; they are not versioned (upstream used Git LFS and ran out of quota).
+docs/pdfs/
+docs/release-notes/
+docs/help-products/
+*.pdf.download
+
+# Update-check reports (regenerated on demand)
+data/update-report.json
+data/last-check.txt
+data/*.bak-*
+data/*.building
