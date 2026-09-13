@@ -57,3 +57,5 @@ data/update-report.json
 data/last-check.txt
 data/*.bak-*
 data/*.building
+data/check.log
+data/launchd.log
