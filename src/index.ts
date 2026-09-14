@@ -37,6 +37,39 @@ const ApiReferenceSchema = z.object({
     endpoint: z.string().max(500).optional()
 });
 
+/**
+ * Resolve a release name to its release-notes file.
+ *
+ * Release notes are one document per release, named ReleaseNotes_{Season}_{YY}.pdf,
+ * so a release can be looked up directly instead of being searched for - the
+ * words "summer" and "26" match text in every release note, which is why a
+ * free-text search for "Summer 26" used to return Spring '07.
+ *
+ * Accepts "Summer 26", "summer '26", "Summer_26", "Summer 2026" and the
+ * documentation version number ("262": two per release, 258 = Winter '26).
+ */
+function releaseNotesFileName(release: string): string | null {
+    const trimmed = release.trim();
+
+    const numeric = trimmed.match(/^(\d{3})$/);
+    if (numeric) {
+        const version = Number(numeric[1]);
+        if (version % 2 !== 0) return null;
+        // 258 = Winter '26 (ships in calendar 2025). Seasons cycle Spring, Summer, Winter.
+        const seasons = ["Spring", "Summer", "Winter"];
+        const index = 2025 * 3 + 2 + (version - 258) / 2;
+        const calendarYear = Math.floor(index / 3);
+        const season = seasons[index - calendarYear * 3];
+        const yearLabel = (season === "Winter" ? calendarYear + 1 : calendarYear) % 100;
+        return `ReleaseNotes_${season}_${String(yearLabel).padStart(2, "0")}.pdf`;
+    }
+
+    const named = trimmed.match(/^(spring|summer|winter)[\s_'’-]*(?:20)?(\d{2})$/i);
+    if (!named) return null;
+    const season = named[1].charAt(0).toUpperCase() + named[1].slice(1).toLowerCase();
+    return `ReleaseNotes_${season}_${named[2]}.pdf`;
+}
+
 const ReleaseNotesSchema = z.object({
     release: z.string().max(100).optional(),
     feature: z.string().max(200).optional()
@@ -150,15 +183,17 @@ Provide the API name and optionally a specific endpoint or resource.`,
     },
     {
         name: "get_release_notes",
-        description: `Get Salesforce release notes for specific releases or features.
-Covers releases from 2015 to present (Winter '26, Summer '25, etc.)
-Search by release name or by feature keyword.`,
+        description: `Get Salesforce release notes for a specific release and/or feature.
+One document per release, Winter '04 through the latest published release.
+With a release: 'Summer 26', "summer '26", 'Summer_26' or the docs version ('262') selects that
+release's notes exactly; add a feature to search within them, omit it for the overview.
+With only a feature: searches across all release notes.`,
         inputSchema: {
             type: "object",
             properties: {
                 release: {
                     type: "string",
-                    description: "Release name (e.g., 'Winter 26', 'Summer 25', 'Spring 24')"
+                    description: "Release name: 'Winter 27', \"summer '26\", 'Spring_24', or docs version like '262'"
                 },
                 feature: {
                     type: "string",
@@ -395,6 +430,49 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 }
                 const { release, feature } = parseResult.data;
 
+                // A recognisable release name selects exactly one document.
+                const fileName = release ? releaseNotesFileName(release) : null;
+                if (fileName) {
+                    const doc = await getDocumentByFileName(fileName);
+                    if (!doc) {
+                        const indexed = (await getDocumentSummaries(DocCategory.RELEASE_NOTES, 500))
+                            .map(d => d.fileName.match(/^ReleaseNotes_(Spring|Summer|Winter)_(\d{2})\.pdf$/))
+                            .filter((m): m is RegExpMatchArray => m !== null)
+                            // Chronological: Winter 'YY ships in calendar year YY-1, before Spring 'YY.
+                            .map(m => ({
+                                label: `${m[1]} '${m[2]}`,
+                                order: (m[1] === "Winter" ? Number(m[2]) - 1 : Number(m[2])) * 3 + ["Spring", "Summer", "Winter"].indexOf(m[1])
+                            }))
+                            .sort((a, b) => b.order - a.order);
+                        const wanted = fileName.replace(/^ReleaseNotes_(\w+)_(\d{2})\.pdf$/, "$1 '$2");
+                        return {
+                            content: [{
+                                type: "text",
+                                text: `${wanted} release notes are not in the index. Latest indexed: ${indexed[0]?.label ?? "none"}. ` +
+                                    `Run \`npm run check-updates\` in the salesforce-docs-mcp repo to see whether Salesforce has published them.`
+                            }]
+                        };
+                    }
+
+                    if (feature) {
+                        const results = await searchDocuments(feature, {
+                            category: DocCategory.RELEASE_NOTES,
+                            documentId: doc.id,
+                            maxResults: 5,
+                            intent: "release_notes"
+                        });
+                        return {
+                            content: [{ type: "text", text: formatSearchResults(results, `${feature} (${doc.title})`) }]
+                        };
+                    }
+
+                    const content = await getDocumentContent(doc.id);
+                    return {
+                        content: [{ type: "text", text: formatDocument(doc, content) }]
+                    };
+                }
+
+                // No (recognisable) release: search the feature across all release notes.
                 const query = [release, feature].filter(Boolean).join(" ");
                 const results = await searchDocuments(query, {
                     category: DocCategory.RELEASE_NOTES,

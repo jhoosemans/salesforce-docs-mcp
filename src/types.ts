@@ -149,6 +149,8 @@ export interface SearchOptions {
     category?: DocCategory;
     subcategory?: string;
     docType?: DocType;
+    /** Restrict the search to one document (e.g. a specific release's notes). */
+    documentId?: number;
     maxResults?: number;
     intent?: string;
     keywords?: string[];

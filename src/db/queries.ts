@@ -136,6 +136,10 @@ export async function searchDocuments(
             sql += ` AND d.subcategory = ?`;
             params.push(subcategory);
         }
+        if (options.documentId !== undefined) {
+            sql += ` AND d.id = ?`;
+            params.push(options.documentId);
+        }
         
         // Order by priority before limiting to ensure high-priority docs are included
         sql += ` ORDER BY d.priority DESC LIMIT ?`;
