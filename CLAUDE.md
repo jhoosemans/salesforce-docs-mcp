@@ -26,6 +26,7 @@ npm run build-manifest                   # re-derive the manifest (carries recor
 npm run test-search                      # 361 search assertions; compare pass count to the previous run
 npm run test-llm-judge                   # LLM-judged relevance
 scripts/scheduled-check.sh               # what launchd runs weekly; --notify-test to test the notification
+                                         # (needs the "Salesforce docs notify" shortcut - see MAINTENANCE.md)
 ```
 
 Restart any running Claude Code session after re-indexing: the server loads the DB once at startup.

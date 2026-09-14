@@ -22,11 +22,28 @@ LOG=data/check.log
 STATUS=data/last-check.txt
 
 notify() {
-    # $1 title, $2 message. osascript is enough; no extra tooling needed.
-    osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
+    # $1 title (informational - the shortcut sets its own), $2 message.
+    #
+    # Delivery is through the Shortcuts app: a user-made shortcut named
+    # "Salesforce docs notify" whose only action is "Show Notification" with
+    # the body set to Shortcut Input. Shortcuts is Apple-signed and already
+    # permitted, so this works from launchd. Both `osascript display
+    # notification` (attributed to the launching app - none under launchd)
+    # and terminal-notifier (ad-hoc signed, rejected by Gatekeeper) were
+    # dropped silently on macOS 26 - verified 2026-09-14.
+    if shortcuts list 2>/dev/null | grep -qx "Salesforce docs notify"; then
+        printf '%s\n' "$2" | shortcuts run "Salesforce docs notify" >/dev/null 2>&1 || true
+    else
+        osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
+    fi
 }
 
 if [ "${1:-}" = "--notify-test" ]; then
+    if shortcuts list 2>/dev/null | grep -qx "Salesforce docs notify"; then
+        echo "via Shortcuts: 'Salesforce docs notify'"
+    else
+        echo "WARNING: shortcut 'Salesforce docs notify' not found - falling back to osascript, which launchd cannot deliver"
+    fi
     notify "Salesforce docs" "Notification test - the scheduled check can reach you."
     exit 0
 fi

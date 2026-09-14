@@ -120,7 +120,13 @@ Restart any running Claude Code session afterwards — the server loads the DB o
 **Scheduled check.** launchd agent `com.jessehoosemans.salesforce-docs-check`
 (`~/Library/LaunchAgents/…plist`) runs `scripts/scheduled-check.sh` every **Monday 09:00**: read-only,
 posts a macOS notification only when there is something to fetch (or the check itself failed),
-writes `data/last-check.txt`, `data/update-report.json`, `data/check.log`. On a notification: say
+writes `data/last-check.txt`, `data/update-report.json`, `data/check.log`.
+Notifications go through the **Opdrachten/Shortcuts** app: a shortcut named exactly
+`Salesforce docs notify` with one action, *Toon melding* (title "Salesforce docs", body = *Invoer
+opdracht*). It must exist or nothing is shown — `scripts/scheduled-check.sh --notify-test` says which
+path it used. Why (2026-09-14, macOS 26): `osascript display notification` is attributed to the
+launching app and launchd has none; `terminal-notifier` (Homebrew) is ad-hoc signed and Gatekeeper
+rejects it — both are dropped silently and never appear in Notification settings. On a notification: say
 "Go" to Claude, or run `npm run update-docs` yourself. Manage with
 `launchctl kickstart gui/$UID/com.jessehoosemans.salesforce-docs-check` (run now) /
 `launchctl bootout gui/$UID/com.jessehoosemans.salesforce-docs-check` (remove).
