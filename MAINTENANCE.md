@@ -15,6 +15,28 @@ https://github.com/SalesforceDiariesBySanket/salesforce-docs-mcp
   446 MB. Developer guides at **Winter '27** (docs version 264, API 68.0); release notes through
   **Summer '26** (Winter '27 notes PDF not published by Salesforce yet — the weekly check reports it).
   See "Incremental sync pipeline (2026-09-13)" at the end of this note.
+- **Update 2026-09-23:** incremental sync run by Claude on Jesse's "Go" — `check-updates` flagged 16
+  changed documents (97.1 MB), `update-docs` fetched and re-indexed them with `--changed-only`, 0 failed.
+  Index now **345 documents, 135,541 chunks, 446.33 MB**; developer guides still at **Winter '27**,
+  release notes still through **Summer '26** (the Winter '27 notes PDF is still unpublished).
+  A second `check-updates` afterwards reports `changed 0 - Everything is up to date`.
+  The 16: apex_api, api_console, api_meta, api_tooling, field_history_retention, fsc_dev_guide,
+  health_cloud_dev_guide, object_reference, platform_events, salesforce_apex_developer_guide,
+  salesforce_app_limits_cheatsheet, salesforce_chatter_rest_api, salesforce_large_data_volumes_bp,
+  salesforce_record_access_under_the_hood, secure_coding, sfdx_dev.
+  - `npm run test-search`: **344 passed, 17 failed** against the 16 documented on 2026-09-13. Every
+    failure is a *relevance-ranking* assertion (does the top hit contain given keywords, for
+    deliberately misspelled queries like "queuable apex job" or "metadta deploy"), not missing or
+    corrupt data; the only two "no results" cases are `Database.getDeleted` and `Database.getUpdated`.
+    Whether the extra failure is a real ranking shift or baseline drift cannot be told from here —
+    the harness prints no per-test history and no previous run is stored. **If that matters, save a
+    run's output as the baseline to diff against next time.**
+  - **Two documents are gone upstream** and still sit in the index, still surfacing in results:
+    `api_bulk_asynch.pdf` and `rest_api_ui.pdf` (HTTP 404, retired by Salesforce). Nothing removes
+    them automatically; decide whether to drop them from the manifest and rebuild.
+  - **Gotcha:** `check-updates` does **not** rewrite `data/last-check.txt` — only the launchd agent
+    does. After a manual update that file keeps reporting `UPDATES AVAILABLE` until the next
+    scheduled run, so do not read it as the current state.
 
 ## Why the repo's own PDFs aren't used
 
