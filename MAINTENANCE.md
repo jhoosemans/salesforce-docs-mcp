@@ -37,6 +37,23 @@ https://github.com/SalesforceDiariesBySanket/salesforce-docs-mcp
   - **Gotcha:** `check-updates` does **not** rewrite `data/last-check.txt` — only the launchd agent
     does. After a manual update that file keeps reporting `UPDATES AVAILABLE` until the next
     scheduled run, so do not read it as the current state.
+- **Update 2026-09-26:** incremental sync run by Claude on Jesse's "Go". `check-updates` flagged 12
+  changed documents (78.7 MB) — 11 of the 16 from 2026-09-23 plus `api_action`. Verified before
+  fetching that this was a real upstream change and not validator churn: live `HEAD` showed
+  `Last-Modified` moved from Fri 18 Sep to Fri 25 Sep with new ETags, and after download all 12
+  sha256 values in the manifest differ from the 23 Sep ones. The two `update-docs` steps were run
+  separately (`sync-docs`, then `build-index --changed-only`), 0 failed. Index now **345 documents,
+  135,557 chunks, 446.44 MB**; developer guides still at **Winter '27**, release notes still through
+  **Summer '26** (Winter '27 notes PDF still unpublished). A second `check-updates` afterwards
+  reports `changed 0 - Everything is up to date`.
+  - **Pattern:** Salesforce re-renders the "latest" Winter '27 developer PDFs every Friday (11, 18,
+    25 Sep so far), so the weekly check will keep flagging roughly this set, ~80 MB a time. Whether
+    the *text* changed cannot be told from headers; only the sha256 after download tells, and it has
+    differed each time. Decide whether weekly is worth it or whether to sync only at release
+    boundaries.
+  - `last-check.txt` still says `UPDATES AVAILABLE` from the 21 Sep scheduled run (the gotcha
+    above); it corrects itself at the next launchd run.
+  - `test-search` was not run this time.
 
 ## Why the repo's own PDFs aren't used
 

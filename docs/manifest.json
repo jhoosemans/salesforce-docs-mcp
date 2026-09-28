@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-23T05:26:54.900Z",
+  "generatedAt": "2026-09-26T18:11:36.699Z",
   "syncedRelease": {
     "version": 264,
     "name": "Winter '27",
@@ -9,7 +9,7 @@
   "confirmedCurrentRelease": {
     "version": 264,
     "name": "Winter '27",
-    "checkedAt": "2026-09-23T05:26:54.900Z"
+    "checkedAt": "2026-09-26T18:11:36.699Z"
   },
   "documents": [
     {
@@ -43,12 +43,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "8ae65c57b832739fabd7f3de1ecbb304:1789701959.602485",
-      "lastModified": "Fri, 18 Sep 2026 03:25:59 GMT",
+      "etag": "98e277f2ebee8dd5fd5478f013caf0b3:1790306777.415664",
+      "lastModified": "Fri, 25 Sep 2026 03:26:17 GMT",
       "sizeBytes": 3640405,
-      "sha256": "9c432b6df714c05bd1b2cb9773d40dcd6cf87787d89f40ca88d8f5e3cafc74d1",
-      "fetchedAt": "2026-09-23T05:26:52.197Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "sha256": "e6c839ce5e03cba581c66ea85a5845b7db6e0430936ef1a47b68c090b4b858f8",
+      "fetchedAt": "2026-09-26T18:11:34.040Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "apex_workbook",
@@ -81,12 +81,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "d9addf881880c8f2eb68a95607b3d59e:1789118693.399053",
-      "lastModified": "Fri, 11 Sep 2026 09:24:53 GMT",
-      "sizeBytes": 1354614,
-      "sha256": "20c99818c92f0aff3b98e4e9c05cf2661ad1352b48ca0f0066185d9eef70fe48",
-      "fetchedAt": "2026-09-13T11:18:32.752Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "b4aa934d0b6ff2b702f80e16e9d2adb1:1790328303.197857",
+      "lastModified": "Fri, 25 Sep 2026 09:25:03 GMT",
+      "sizeBytes": 1353992,
+      "sha256": "00d4f36ac8a9fb386f9b0570c67be2dcb946ce68b9b2d7e387183f019950840c",
+      "fetchedAt": "2026-09-26T18:11:33.652Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "api_apex_rest",
@@ -176,12 +176,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "ec3dfce12c78f10c8d6856b191b0eba4:1789701960.116691",
-      "lastModified": "Fri, 18 Sep 2026 03:26:00 GMT",
-      "sizeBytes": 2953441,
-      "sha256": "f4a0faedd66a3f9f003caf1731c20d61a9d16cf0e8a79d80778cc42ca305d509",
-      "fetchedAt": "2026-09-23T05:26:51.955Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "21eaab1298a89e5e52c7856ee2b533f0:1790328303.634825",
+      "lastModified": "Fri, 25 Sep 2026 09:25:03 GMT",
+      "sizeBytes": 2951681,
+      "sha256": "ae2a737b788e0bbc74e0f218b85578da6257b7fb11e10073c7fe5b77eb18b9fa",
+      "fetchedAt": "2026-09-26T18:11:33.646Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "api_meta",
@@ -195,12 +195,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "26fc5c4e1470045d90298791a620ae80:1789723570.591471",
-      "lastModified": "Fri, 18 Sep 2026 09:26:10 GMT",
-      "sizeBytes": 11916825,
-      "sha256": "62ed2c0ed2c0070fddee6491a5b1a9e76c304d1fead0de34038d739c79b0d74f",
-      "fetchedAt": "2026-09-23T05:26:51.073Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "d11888305e58c1de2a53d8a4f9c81ace:1790328304.460913",
+      "lastModified": "Fri, 25 Sep 2026 09:25:04 GMT",
+      "sizeBytes": 11922965,
+      "sha256": "54ca1f79641d170e5a81e836770e404526a25c75f90e16ffdf521987c525bd08",
+      "fetchedAt": "2026-09-26T18:11:35.290Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "api_rest",
@@ -252,12 +252,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "3b58b8aa23e466a822bdaa3b655d0b16:1789723571.349002",
-      "lastModified": "Fri, 18 Sep 2026 09:26:11 GMT",
-      "sizeBytes": 4113870,
-      "sha256": "ade2a896cd9d8045ef085c09338ff2f641a483603dc19d545e159af836ee5e0f",
-      "fetchedAt": "2026-09-23T05:26:52.167Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "e6159445e09c415b699b17513260a257:1790328305.066352",
+      "lastModified": "Fri, 25 Sep 2026 09:25:05 GMT",
+      "sizeBytes": 4113685,
+      "sha256": "75e135b1ef3405f66c6697ec1cb3965c2c37a707b52c742f7b4d6681a5c04b2c",
+      "fetchedAt": "2026-09-26T18:11:34.367Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "api",
@@ -1411,12 +1411,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "8d8b75a94390df496c1be521d0bd1c7a:1789723577.393087",
-      "lastModified": "Fri, 18 Sep 2026 09:26:17 GMT",
-      "sizeBytes": 843954,
-      "sha256": "a0b570877711128d7d17585592eb07c55974f318d52f2015d51098881dd89e28",
-      "fetchedAt": "2026-09-23T05:26:52.481Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "a941a7d62117f396ee180762d2f5c786:1790328313.397711",
+      "lastModified": "Fri, 25 Sep 2026 09:25:13 GMT",
+      "sizeBytes": 815777,
+      "sha256": "c306af159cac9216654d359b92d2763fbf623a03a5ba7b7e132db9a344fd2004",
+      "fetchedAt": "2026-09-26T18:11:34.444Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "financial_services",
@@ -1506,12 +1506,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "e2a9b6e93ca2e83a7e1d0a527b13bfc1:1789723578.695258",
-      "lastModified": "Fri, 18 Sep 2026 09:26:18 GMT",
-      "sizeBytes": 5652838,
-      "sha256": "d275baf9cabab53e798c380007b0be2280ffa928c41a531801b4c2222976c6cb",
-      "fetchedAt": "2026-09-23T05:26:52.944Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "0bf92d41f050862fcef524981495c9b7:1790328314.331188",
+      "lastModified": "Fri, 25 Sep 2026 09:25:14 GMT",
+      "sizeBytes": 5695925,
+      "sha256": "eff87737763579e9f24585cee833e7c312e7d886792dc519dec43b375ddfb0ef",
+      "fetchedAt": "2026-09-26T18:11:35.095Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "generate_orders_implementation_guide",
@@ -1544,12 +1544,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "b77be1f511fb8fbb45c888eee6e5bf84:1789723582.43646",
-      "lastModified": "Fri, 18 Sep 2026 09:26:22 GMT",
-      "sizeBytes": 18959435,
-      "sha256": "78596f750efa99a2fb2d188d66421bd20e0daf548d45765478fa2eb747e0c524",
-      "fetchedAt": "2026-09-23T05:26:53.571Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "9216612c840961275d310d3d16bc3d63:1790328315.391478",
+      "lastModified": "Fri, 25 Sep 2026 09:25:15 GMT",
+      "sizeBytes": 18980999,
+      "sha256": "4edba7086c95b9cb43a8c67bad16ed491bd75331f22350a6b5c47a74ce33e3f7",
+      "fetchedAt": "2026-09-26T18:11:35.842Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "healthcare",
@@ -1924,12 +1924,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "93a357b453a01cd4e39af4265a70ae89:1789723597.178599",
-      "lastModified": "Fri, 18 Sep 2026 09:26:37 GMT",
-      "sizeBytes": 21198673,
-      "sha256": "d38b3bb1667f844c0f430f57f2037bbdb68553e780965b7c36d40812d1389ade",
-      "fetchedAt": "2026-09-23T05:26:54.242Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "79f6cc042e7ccb73a138581ea2994551:1790328320.777961",
+      "lastModified": "Fri, 25 Sep 2026 09:25:20 GMT",
+      "sizeBytes": 21175379,
+      "sha256": "d2794b02927d9949d13780609b09184343fcbc38e182f3dd2084e214bcc6a67d",
+      "fetchedAt": "2026-09-26T18:11:36.447Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "oem_user_license_comparison_tipsheet",
@@ -3957,12 +3957,12 @@
       "pinnedVersion": 258,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "a0de8629b137f01c10d2201a88dd6e8b:1789723601.148475",
-      "lastModified": "Fri, 18 Sep 2026 09:26:41 GMT",
-      "sizeBytes": 6703579,
-      "sha256": "99572759396eaefda6a6120d960999522c4f5c2415d87cb715403052a1e36011",
-      "fetchedAt": "2026-09-23T05:26:53.218Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "cf436a7938c795613817116937f29cd5:1790328325.02878",
+      "lastModified": "Fri, 25 Sep 2026 09:25:25 GMT",
+      "sizeBytes": 6721344,
+      "sha256": "309dc8b09db6ab1bc5557c15efa1fb34181f5b9e4705d667a398fa349ab8b409",
+      "fetchedAt": "2026-09-26T18:11:36.036Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "salesforce_apex_language_reference",
@@ -7301,12 +7301,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "3410faec556e5af63851a0526a051048:1789723607.923431",
-      "lastModified": "Fri, 18 Sep 2026 09:26:47 GMT",
-      "sizeBytes": 1233112,
-      "sha256": "1267276b12c59c94132e5e65e7d0655bcbc81f190aea190721549e3da84ba3d4",
-      "fetchedAt": "2026-09-23T05:26:54.794Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "64cb328e6f424a65dfd8d260836c8b2e:1790328328.137733",
+      "lastModified": "Fri, 25 Sep 2026 09:25:28 GMT",
+      "sizeBytes": 1209302,
+      "sha256": "58a7303e26b3f2ec435c9615e8af3c55dd827f23242a0ce6727f8e7b7e32a3fb",
+      "fetchedAt": "2026-09-26T18:11:36.458Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "security_certificate_changes",
@@ -7776,12 +7776,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "ff10ff42e81e02b1f00bb7a943033484:1789723608.248968",
-      "lastModified": "Fri, 18 Sep 2026 09:26:48 GMT",
-      "sizeBytes": 3982295,
-      "sha256": "2398605317cfc692582b73892668818032c24afcf92b8042908f70b1668f5cf5",
-      "fetchedAt": "2026-09-23T05:26:54.717Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "d47f8557d4a4153bca305d99d6982af0:1790328328.486081",
+      "lastModified": "Fri, 25 Sep 2026 09:25:28 GMT",
+      "sizeBytes": 3986986,
+      "sha256": "6f3651963034dc31cdff6886c5853452bb7242c52438689aa4917bd7373cf4f6",
+      "fetchedAt": "2026-09-26T18:11:36.699Z",
+      "indexedAt": "2026-09-26T18:11:46.878Z"
     },
     {
       "id": "sfdx_ide2",
