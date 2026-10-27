@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-26T18:11:36.699Z",
+  "generatedAt": "2026-10-21T05:27:00.097Z",
   "syncedRelease": {
     "version": 264,
     "name": "Winter '27",
@@ -9,7 +9,7 @@
   "confirmedCurrentRelease": {
     "version": 264,
     "name": "Winter '27",
-    "checkedAt": "2026-09-26T18:11:36.699Z"
+    "checkedAt": "2026-10-21T05:27:00.097Z"
   },
   "documents": [
     {
@@ -24,12 +24,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "c2c22d75f9d3cd7694280f19deecbe02:1789118692.879195",
-      "lastModified": "Fri, 11 Sep 2026 09:24:52 GMT",
-      "sizeBytes": 973659,
-      "sha256": "cc1d66d6533f4e1c62aa8ae26400058593728810bc5094544fe6ad6543859e12",
-      "fetchedAt": "2026-09-13T11:18:31.809Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "815b052500cafbee76cda1189e7dc7b9:1792120686.438126",
+      "lastModified": "Fri, 16 Oct 2026 03:18:06 GMT",
+      "sizeBytes": 973658,
+      "sha256": "4094b8f4fd51fc339c9b8685ae61870b26323541a4e1ca9a3ff626512abae770",
+      "fetchedAt": "2026-10-21T05:26:53.900Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "apex_api",
@@ -43,12 +43,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "98e277f2ebee8dd5fd5478f013caf0b3:1790306777.415664",
-      "lastModified": "Fri, 25 Sep 2026 03:26:17 GMT",
-      "sizeBytes": 3640405,
-      "sha256": "e6c839ce5e03cba581c66ea85a5845b7db6e0430936ef1a47b68c090b4b858f8",
-      "fetchedAt": "2026-09-26T18:11:34.040Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "618288ba33def4b60346e7235ff1d1bd:1792120686.881362",
+      "lastModified": "Fri, 16 Oct 2026 03:18:06 GMT",
+      "sizeBytes": 3640404,
+      "sha256": "2658c3b444b81616a58d7ea091bc57ea75254357e163072dfb824d08660e4028",
+      "fetchedAt": "2026-10-21T05:26:54.271Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "apex_workbook",
@@ -81,12 +81,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "b4aa934d0b6ff2b702f80e16e9d2adb1:1790328303.197857",
-      "lastModified": "Fri, 25 Sep 2026 09:25:03 GMT",
-      "sizeBytes": 1353992,
-      "sha256": "00d4f36ac8a9fb386f9b0570c67be2dcb946ce68b9b2d7e387183f019950840c",
-      "fetchedAt": "2026-09-26T18:11:33.652Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "79134ffa895aad38e8c26c7e5619599e:1792120687.468811",
+      "lastModified": "Fri, 16 Oct 2026 03:18:07 GMT",
+      "sizeBytes": 1353988,
+      "sha256": "877165c5981d1e0bbbd54df9f149a205931974f4a02591198972840d072d625d",
+      "fetchedAt": "2026-10-21T05:26:53.918Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "api_apex_rest",
@@ -119,12 +119,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "3c26c5bde1c181620dbfda6e554d501b:1789118693.862988",
-      "lastModified": "Fri, 11 Sep 2026 09:24:53 GMT",
-      "sizeBytes": 4932288,
-      "sha256": "c1628cbdda752bcceec1f857022ef5527a06ddca13fb38ffcc11d5e28321a8fb",
-      "fetchedAt": "2026-09-13T11:18:32.925Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "8842112956d1c0475527ce0f59925f4c:1792120687.912041",
+      "lastModified": "Fri, 16 Oct 2026 03:18:07 GMT",
+      "sizeBytes": 4932283,
+      "sha256": "eb44dcce0763a0590104edcba08518e2d155dca3adc0a42268fb957b18abdf6d",
+      "fetchedAt": "2026-10-21T05:26:54.458Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "api_bulk_asynch",
@@ -195,12 +195,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "d11888305e58c1de2a53d8a4f9c81ace:1790328304.460913",
-      "lastModified": "Fri, 25 Sep 2026 09:25:04 GMT",
-      "sizeBytes": 11922965,
-      "sha256": "54ca1f79641d170e5a81e836770e404526a25c75f90e16ffdf521987c525bd08",
-      "fetchedAt": "2026-09-26T18:11:35.290Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "de915f228535dbc2def984d221cccca5:1792142309.496917",
+      "lastModified": "Fri, 16 Oct 2026 09:18:29 GMT",
+      "sizeBytes": 12017327,
+      "sha256": "04d9a4bf02fae2b54a3401e9e15b74cd981b7ff1db24ce717de9caeac567d9da",
+      "fetchedAt": "2026-10-21T05:26:54.220Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "api_rest",
@@ -214,12 +214,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "058594d46a4f87662924f70918d6bf3d:1789118697.791615",
-      "lastModified": "Fri, 11 Sep 2026 09:24:57 GMT",
+      "etag": "7f269fd59afdd5ba9f930942159e2e98:1792120689.994559",
+      "lastModified": "Fri, 16 Oct 2026 03:18:09 GMT",
       "sizeBytes": 2892790,
-      "sha256": "9576bbbe14f5e7c9e867f20b254bdb61e141c54592d5b553934a27f140ab911f",
-      "fetchedAt": null,
-      "indexedAt": "2026-09-12T18:56:51.566Z"
+      "sha256": "4238facb497fc472d32cdc52ed54cb9d1fe4a29c46b2c22e1f666ad54d7fabb5",
+      "fetchedAt": "2026-10-21T05:26:54.690Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "api_streaming",
@@ -233,12 +233,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "0d6f76def5fd8c7605a25dfa3a4b26b2:1789118698.810447",
-      "lastModified": "Fri, 11 Sep 2026 09:24:58 GMT",
-      "sizeBytes": 1522658,
-      "sha256": "b9882392f59af64ff0b08112d2de774b6f4271b44871421a32655a5911f74d57",
-      "fetchedAt": "2026-09-13T11:18:33.643Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "65300ce1610edb23d0dc800dcedc453c:1792120690.410812",
+      "lastModified": "Fri, 16 Oct 2026 03:18:10 GMT",
+      "sizeBytes": 1522657,
+      "sha256": "5f381ca58749931ae362565cc307377b868343f4b1617fb696cf2271981f6769",
+      "fetchedAt": "2026-10-21T05:26:55.194Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "api_tooling",
@@ -252,12 +252,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "e6159445e09c415b699b17513260a257:1790328305.066352",
-      "lastModified": "Fri, 25 Sep 2026 09:25:05 GMT",
-      "sizeBytes": 4113685,
-      "sha256": "75e135b1ef3405f66c6697ec1cb3965c2c37a707b52c742f7b4d6681a5c04b2c",
-      "fetchedAt": "2026-09-26T18:11:34.367Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "4513c134403fb5bb0ae49dd2262f8019:1792120690.872003",
+      "lastModified": "Fri, 16 Oct 2026 03:18:10 GMT",
+      "sizeBytes": 4204659,
+      "sha256": "4f48aba08f71523c0edac7f9547550a2430dcbe0a1cbec52beede90a81c15dfe",
+      "fetchedAt": "2026-10-21T05:26:54.803Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "api",
@@ -537,12 +537,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "344bff9c9d3c77bd0a42e31997480035:1789118702.649042",
-      "lastModified": "Fri, 11 Sep 2026 09:25:02 GMT",
-      "sizeBytes": 3752764,
-      "sha256": "81aed43f3aab9c6b0a2ddc88af8bd9d824f6ac0e46cc698301ed9a9b240fc3b0",
-      "fetchedAt": "2026-09-13T11:18:35.043Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "e95982e5f0797e9ea94cc687a679840e:1792120692.486823",
+      "lastModified": "Fri, 16 Oct 2026 03:18:12 GMT",
+      "sizeBytes": 3769057,
+      "sha256": "b02cfa28ec33ddf72b674358b46f8f8ac8db2dda3abdfb4d3f8a7ab33ded41db",
+      "fetchedAt": "2026-10-21T05:26:55.584Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "bi_dev_guide_saql",
@@ -594,12 +594,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "e47f7c2ebd95a340bbb634f87672b4b3:1789118704.186552",
-      "lastModified": "Fri, 11 Sep 2026 09:25:04 GMT",
-      "sizeBytes": 2368323,
-      "sha256": "be35ca1b9919c00cd5695e748e087fbece6265b12fa4ed9a4c4c3d092f33dabd",
-      "fetchedAt": "2026-09-13T11:18:35.738Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "d9067104203e0a76c96aab5967e74c0a:1792120693.533574",
+      "lastModified": "Fri, 16 Oct 2026 03:18:13 GMT",
+      "sizeBytes": 2368326,
+      "sha256": "523db9727edbe36fe4a87231f3bd0215bd63edec9ee123e8185defe5c3c82f6c",
+      "fetchedAt": "2026-10-21T05:26:55.994Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "bi_dev_guide_xmd",
@@ -632,12 +632,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "af26681f0f51372f855a9649e2d80298:1789118704.501789",
-      "lastModified": "Fri, 11 Sep 2026 09:25:04 GMT",
-      "sizeBytes": 980049,
-      "sha256": "ff11bc0dd0eb8c66dbf9bc2024b557af534e1abb2469985978d81fb1ef2b30c9",
-      "fetchedAt": "2026-09-13T11:18:35.994Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "b9a8cb3c10d756499c24d5b4ad832901:1792120694.036693",
+      "lastModified": "Fri, 16 Oct 2026 03:18:14 GMT",
+      "sizeBytes": 980046,
+      "sha256": "323ce3f1c98179e25356c8da958874f5f01755eca8ac82c4b6566f1a70dd5b58",
+      "fetchedAt": "2026-10-21T05:26:55.877Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "buddymedia_BuddyMediaAnalytics",
@@ -898,12 +898,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "c937b302797ad42d3fafec437b06dbbc:1789118706.691048",
-      "lastModified": "Fri, 11 Sep 2026 09:25:06 GMT",
-      "sizeBytes": 1977817,
-      "sha256": "91d8ae9fdede7435b08b9588804c67f6e93dae46aa03352068caf046d26a5b74",
-      "fetchedAt": "2026-09-13T11:18:36.741Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "cc5a1857402aeecc5d30e228610d3e13:1792120694.659766",
+      "lastModified": "Fri, 16 Oct 2026 03:18:14 GMT",
+      "sizeBytes": 1977816,
+      "sha256": "87b314007e50fbd60b3d8689814879a5055bec1c54b8fd3aa83a45562db044c5",
+      "fetchedAt": "2026-10-21T05:26:56.504Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "case_feed_dev_guide",
@@ -1506,12 +1506,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "0bf92d41f050862fcef524981495c9b7:1790328314.331188",
-      "lastModified": "Fri, 25 Sep 2026 09:25:14 GMT",
-      "sizeBytes": 5695925,
-      "sha256": "eff87737763579e9f24585cee833e7c312e7d886792dc519dec43b375ddfb0ef",
-      "fetchedAt": "2026-09-26T18:11:35.095Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "ce0f0904925ec1b66e3cb64e1dac0986:1792142311.578283",
+      "lastModified": "Fri, 16 Oct 2026 09:18:31 GMT",
+      "sizeBytes": 5490399,
+      "sha256": "e366f168cc3d0a5d0c307ccdc4e207ae9cd41bd4665acf1f63546da9019a2460",
+      "fetchedAt": "2026-10-21T05:26:56.498Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "generate_orders_implementation_guide",
@@ -1544,12 +1544,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "9216612c840961275d310d3d16bc3d63:1790328315.391478",
-      "lastModified": "Fri, 25 Sep 2026 09:25:15 GMT",
-      "sizeBytes": 18980999,
-      "sha256": "4edba7086c95b9cb43a8c67bad16ed491bd75331f22350a6b5c47a74ce33e3f7",
-      "fetchedAt": "2026-09-26T18:11:35.842Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "844bdbc880eb549278231414ecac7ebc:1792142312.212386",
+      "lastModified": "Fri, 16 Oct 2026 09:18:32 GMT",
+      "sizeBytes": 19005992,
+      "sha256": "57546afaffb8e5e2072e4cf5c5ef56daf1014c0d76d073a636db4b13a6442deb",
+      "fetchedAt": "2026-10-21T05:26:57.167Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "healthcare",
@@ -1905,12 +1905,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "dc82a1a4a0981c9d5d04520c4beb8da2:1789118729.926109",
-      "lastModified": "Fri, 11 Sep 2026 09:25:29 GMT",
-      "sizeBytes": 7196104,
-      "sha256": "d777ff393fcfd9250facf6a6ea18378adb7d3d894819afb40ac8ad607e7e9c2f",
-      "fetchedAt": "2026-09-13T11:18:41.717Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "54496e396c3335024f874f23c9a3fd37:1792120701.123091",
+      "lastModified": "Fri, 16 Oct 2026 03:18:21 GMT",
+      "sizeBytes": 7196102,
+      "sha256": "a04cda9a8a0c118d6769a7d68020fd2a563c924d1fa9f1e7585de1135d3476dc",
+      "fetchedAt": "2026-10-21T05:26:57.385Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "object_reference",
@@ -1924,12 +1924,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "79f6cc042e7ccb73a138581ea2994551:1790328320.777961",
-      "lastModified": "Fri, 25 Sep 2026 09:25:20 GMT",
-      "sizeBytes": 21175379,
-      "sha256": "d2794b02927d9949d13780609b09184343fcbc38e182f3dd2084e214bcc6a67d",
-      "fetchedAt": "2026-09-26T18:11:36.447Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "b861840a605e9d29c93edce7a85fd2ce:1792142316.907027",
+      "lastModified": "Fri, 16 Oct 2026 09:18:36 GMT",
+      "sizeBytes": 21280010,
+      "sha256": "28185f1b4dc7c731c61a8777cb51a9d7583835d79adea8da2c57134eb44db257",
+      "fetchedAt": "2026-10-21T05:26:57.100Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "oem_user_license_comparison_tipsheet",
@@ -2133,12 +2133,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "deab8cc84f3e284362e61e9e8ee88daa:1789723598.631136",
-      "lastModified": "Fri, 18 Sep 2026 09:26:38 GMT",
-      "sizeBytes": 4333037,
-      "sha256": "5e972e8b31ad322182f91190b727c51f9e3f12febdaa0e6c99f7b519ebbed5a4",
-      "fetchedAt": "2026-09-23T05:26:53.064Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "a78e0cb695f05e23cccc5abd085a0b86:1792120706.174553",
+      "lastModified": "Fri, 16 Oct 2026 03:18:26 GMT",
+      "sizeBytes": 4333029,
+      "sha256": "62efd6e6b93ee75d21d71636f61ba521fd6476f8a814342b42fda1b34813242b",
+      "fetchedAt": "2026-10-21T05:26:57.640Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "radian6_MarketingCloudRadian6Introduction",
@@ -3919,12 +3919,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "0b5c975865d9d3c13215b450063013f0:1789118739.870944",
-      "lastModified": "Fri, 11 Sep 2026 09:25:39 GMT",
-      "sizeBytes": 2102017,
-      "sha256": "296f415c05005c1a2433d32160daa3909161d8ced2788a325e8a08ad9f09581d",
-      "fetchedAt": "2026-09-13T11:18:42.337Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "fbc067b87121e5b94c5924e7261faa23:1792120708.334765",
+      "lastModified": "Fri, 16 Oct 2026 03:18:28 GMT",
+      "sizeBytes": 2102013,
+      "sha256": "1eef00a07e3ada72ae9f8442922032cca4ae19892d7d36dcb5a1daade15b244e",
+      "fetchedAt": "2026-10-21T05:26:58.102Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_answers_implementation_guide",
@@ -3957,12 +3957,12 @@
       "pinnedVersion": 258,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "cf436a7938c795613817116937f29cd5:1790328325.02878",
-      "lastModified": "Fri, 25 Sep 2026 09:25:25 GMT",
-      "sizeBytes": 6721344,
-      "sha256": "309dc8b09db6ab1bc5557c15efa1fb34181f5b9e4705d667a398fa349ab8b409",
-      "fetchedAt": "2026-09-26T18:11:36.036Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "10700be572a8f7ad75b183ff584e8b85:1792142319.421337",
+      "lastModified": "Fri, 16 Oct 2026 09:18:39 GMT",
+      "sizeBytes": 6718729,
+      "sha256": "b2b361418543c37d2302060aae2474749cae960f610a2b9af171198b22f32eef",
+      "fetchedAt": "2026-10-21T05:26:57.507Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_apex_language_reference",
@@ -4261,12 +4261,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "7eaefc806f5c429d4958c7a9ad993b1b:1789723603.123373",
-      "lastModified": "Fri, 18 Sep 2026 09:26:43 GMT",
-      "sizeBytes": 13605026,
-      "sha256": "334107d1280b42aca54b998984edc47b29b8d0f3b17b93763e6d515961d08796",
-      "fetchedAt": "2026-09-23T05:26:54.620Z",
-      "indexedAt": "2026-09-23T05:26:55.553Z"
+      "etag": "df0217220fa124a6a32599fb8dec0a88:1792142319.869534",
+      "lastModified": "Fri, 16 Oct 2026 09:18:39 GMT",
+      "sizeBytes": 13605072,
+      "sha256": "53b82762f7a5414ea48985a2a66016c060a1a6b2ec895897d55ee1d1b61ac876",
+      "fetchedAt": "2026-10-21T05:26:58.885Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_chatterplus_tipsheet",
@@ -4964,12 +4964,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "da6f48f7fb85c636244a783fd6db6878:1787909152.818263",
-      "lastModified": "Fri, 28 Aug 2026 09:25:52 GMT",
-      "sizeBytes": 31586012,
-      "sha256": "2a89c323fe8f00f867f023e914a1776b940bf1d4ac3422db8a4e45052c89a76a",
-      "fetchedAt": "2026-09-13T11:18:47.097Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "2df4f86113d3236161f237bcfc6cda99:1792120710.695355",
+      "lastModified": "Fri, 16 Oct 2026 03:18:30 GMT",
+      "sizeBytes": 23480813,
+      "sha256": "c9ead8f706a84c21c0b8702fcfb48ddc56043f6bfde683174aea42b4d932ed50",
+      "fetchedAt": "2026-10-21T05:26:59.267Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_field_service_lightning_managed_package",
@@ -5572,12 +5572,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "c184cbaf61ab432d97afd7b8e69a6c38:1789118744.796998",
-      "lastModified": "Fri, 11 Sep 2026 09:25:44 GMT",
-      "sizeBytes": 1856718,
-      "sha256": "2840af1e81c4c51cd084f36ddeb4fd3446072436d4195735c3a0edbce64f8a26",
-      "fetchedAt": "2026-09-13T11:18:48.562Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "4fe950e749ec766e70f23b51ec7bc649:1792120711.949354",
+      "lastModified": "Fri, 16 Oct 2026 03:18:31 GMT",
+      "sizeBytes": 1856717,
+      "sha256": "92865d96f8b6b85430b1d84f359e4320d09e20a59d8702e11425aa55d86c6137",
+      "fetchedAt": "2026-10-21T05:26:58.808Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_knowledge_implementation_guide",
@@ -5800,12 +5800,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "e26683b49168112b0f09f744481f8bd5:1789118745.169081",
-      "lastModified": "Fri, 11 Sep 2026 09:25:45 GMT",
-      "sizeBytes": 991191,
-      "sha256": "26f887706c59583ed5835872f8e756cbef337ae18ec14015f4ef4aa1dfdc9531",
-      "fetchedAt": "2026-09-13T11:18:49.560Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "166b0f1ef8bb469f75204c9f0a0f409c:1792120712.89486",
+      "lastModified": "Fri, 16 Oct 2026 03:18:32 GMT",
+      "sizeBytes": 991189,
+      "sha256": "484128b4dadf5a9ee366372171308499107da95f0fbecf44d870550cde66090f",
+      "fetchedAt": "2026-10-21T05:26:59.328Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_mobile_implementation",
@@ -5838,12 +5838,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "d313f79969487f405c6f5e68790c1d79:1789118746.724708",
-      "lastModified": "Fri, 11 Sep 2026 09:25:46 GMT",
-      "sizeBytes": 1205012,
-      "sha256": "4a2c0cf0e11e5ca4f599bf4b858570732025232ac34b6462ce767984bc63c883",
-      "fetchedAt": "2026-09-13T11:18:49.590Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "6ffc022d3c3ecc9a7d60ed78c0e92001:1792120713.290746",
+      "lastModified": "Fri, 16 Oct 2026 03:18:33 GMT",
+      "sizeBytes": 1205010,
+      "sha256": "e94ef4e369e06ceb0ed377faea28d1b0273dc496a63081ada6751faa8e048472",
+      "fetchedAt": "2026-10-21T05:26:59.565Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_mobile_user_guide_android",
@@ -6085,12 +6085,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "c51cb9db3dbb80c4830b8f2bcf7bcac8:1787887660.676185",
-      "lastModified": "Fri, 28 Aug 2026 03:27:40 GMT",
-      "sizeBytes": 894215,
-      "sha256": "326df6c0fa98bb775a0445d207907ac14cbecf2a4823a5e11aa244e7aa128a38",
-      "fetchedAt": "2026-09-13T11:18:50.680Z",
-      "indexedAt": "2026-09-13T11:19:24.956Z"
+      "etag": "1feb16d25fff6e83043c311ad8ecfd69:1790933079.095132",
+      "lastModified": "Fri, 02 Oct 2026 09:24:39 GMT",
+      "sizeBytes": 918537,
+      "sha256": "1127de915a05a76f9c011f9c939f249c2327c7e656712ec7f415504b161aa8de",
+      "fetchedAt": "2026-10-06T05:10:41.681Z",
+      "indexedAt": "2026-10-06T05:10:42.380Z"
     },
     {
       "id": "salesforce_platform_encryption_implementation_guide",
@@ -6731,12 +6731,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "751570bac85677bafaf37bf152ae085f:1789118750.776564",
-      "lastModified": "Fri, 11 Sep 2026 09:25:50 GMT",
-      "sizeBytes": 1895551,
-      "sha256": "45ecd8a97fb428ded217da6b50f863d3d7ded832107ddba90c07cc8a47316d9c",
-      "fetchedAt": null,
-      "indexedAt": "2026-09-12T18:56:51.566Z"
+      "etag": "3eb17a04f05cfb1515669d23c819cc72:1792120715.084168",
+      "lastModified": "Fri, 16 Oct 2026 03:18:35 GMT",
+      "sizeBytes": 1895548,
+      "sha256": "166e4c5734cd6049316c5333573344dc012e7a3d1ddf1b0df28f2d737817ba24",
+      "fetchedAt": "2026-10-21T05:27:00.097Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "salesforce_studio_cheatsheet",
@@ -7301,12 +7301,12 @@
       "pinnedVersion": null,
       "release": "Winter '27",
       "apiVersion": "68.0",
-      "etag": "64cb328e6f424a65dfd8d260836c8b2e:1790328328.137733",
-      "lastModified": "Fri, 25 Sep 2026 09:25:28 GMT",
-      "sizeBytes": 1209302,
-      "sha256": "58a7303e26b3f2ec435c9615e8af3c55dd827f23242a0ce6727f8e7b7e32a3fb",
-      "fetchedAt": "2026-09-26T18:11:36.458Z",
-      "indexedAt": "2026-09-26T18:11:46.878Z"
+      "etag": "5c648d84b096fea82d1854a8149436c3:1792142322.647392",
+      "lastModified": "Fri, 16 Oct 2026 09:18:42 GMT",
+      "sizeBytes": 1215138,
+      "sha256": "2655a604271696165d10036c9c5a9b01f65be4857c4cffe63a95e3b9e4f80828",
+      "fetchedAt": "2026-10-21T05:26:59.883Z",
+      "indexedAt": "2026-10-21T05:27:06.182Z"
     },
     {
       "id": "security_certificate_changes",

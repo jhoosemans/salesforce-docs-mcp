@@ -54,6 +54,26 @@ https://github.com/SalesforceDiariesBySanket/salesforce-docs-mcp
   - `last-check.txt` still says `UPDATES AVAILABLE` from the 21 Sep scheduled run (the gotcha
     above); it corrects itself at the next launchd run.
   - `test-search` was not run this time.
+- **Update 2026-10-21:** incremental sync run by Claude on Jesse's "Go", after the 19 Oct scheduled
+  check reported 26 changed. `check-updates` confirmed the same 26 (144.0 MB): apex_ajax, apex_api,
+  api_action, api_asynch, api_meta, api_rest, api_streaming, api_tooling, bi_dev_guide_rest,
+  bi_dev_guide_wave_templates, big_objects_guide, canvas_framework, fsc_dev_guide,
+  health_cloud_dev_guide, mobile_sdk, object_reference, platform_events,
+  salesforce_analytics_rest_api, salesforce_apex_developer_guide, salesforce_chatter_rest_api,
+  salesforce_field_names_reference, salesforce_knowledge_dev_guide, salesforce_migration_guide,
+  salesforce_mobile_push_notifications_implementation, salesforce_soql_sosl, secure_coding.
+  Run as `sync-docs`, then `build-index --changed-only`; 26 reindexed, 0 failed. Index now
+  **345 documents, 134,303 chunks, 449.52 MB**; developer guides still at **Winter '27**, release
+  notes still through **Summer '26** (Winter '27 notes PDF still unpublished). A second
+  `check-updates` afterwards reports `changed 0 - Everything is up to date`.
+  - **Chunk count dropped by ~1,250** against the 2026-09-26 figure (135,557). Not investigated;
+    inferred to be the re-rendered PDFs chunking differently, not lost documents (document count
+    unchanged, 0 failed).
+  - Rollback DB: `data/salesforce-docs.db.bak-2026-10-21` (copied with `cp -p`, so its file date is
+    13 Oct: the DB was last rebuilt then). There is also a `bak-2026-10-13` dated 6 Oct. **Those
+    13 Oct and 6 Oct runs are not recorded in this note.**
+  - `test-search` was not run. `last-check.txt` keeps saying `UPDATES AVAILABLE` until the next
+    Monday launchd run (gotcha above).
 
 ## Why the repo's own PDFs aren't used
 
