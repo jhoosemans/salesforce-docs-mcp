@@ -2,7 +2,7 @@
  * Build Index Script
  *
  * Parses PDF files and builds the SQLite search index.
- * Uses LIKE-based queries for cross-platform compatibility (sql.js doesn't support FTS5).
+ * Writes with node:sqlite and builds the FTS5 full-text index (src/db/fts.ts) before the swap.
  *
  *   npm run build-index                      # full rebuild (every PDF, ~5-10 min)
  *   npm run build-index -- --changed-only    # only what sync-docs just fetched (seconds)
@@ -12,6 +12,8 @@
  *   --changed-only   Re-index only documents the manifest marks as fetched but
  *                    not yet indexed. Requires an existing database.
  *   --prune          Also drop documents whose PDF is no longer on disk.
+ *   --allow-shrink   Let a full build replace an index that holds more documents
+ *                    (the live index keeps documents whose PDF is not on this machine).
  *   --only <list>    Restrict to matching ids/substrings/globs.
  *   --dry-run        Report what would be indexed; write nothing.
  *
@@ -20,17 +22,18 @@
  * describe and the next incremental build knows what is already current.
  */
 
-/// <reference path="../src/types/sql.js.d.ts" />
+/// <reference path="../src/types/node-sqlite.d.ts" />
 /// <reference path="../src/types/pdf-parse.d.ts" />
 
-import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, mkdirSync, renameSync } from "fs";
+import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, renameSync, copyFileSync, rmSync } from "fs";
 import { join, basename } from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import initSqlJs, { Database } from "sql.js";
+import { DatabaseSync } from "node:sqlite";
 import pdfParse from "pdf-parse";
 
 import { chunkText, cleanPdfText } from "../src/utils/chunker.js";
+import { hasFtsIndex, rebuildFtsIndex } from "../src/db/fts.js";
 import { DocCategory, DocType } from "../src/types.js";
 import { makeFilter, parseArgs } from "./lib/args.js";
 import { sha256 } from "./lib/http.js";
@@ -131,20 +134,19 @@ interface IndexedProvenance {
 }
 
 /** Remove a document and its chunks so it can be re-inserted cleanly. */
-function deleteDocument(db: Database, fileName: string): boolean {
-    const existing = db.exec("SELECT id FROM documents WHERE file_name = ?", [fileName]);
-    const id = existing[0]?.values[0]?.[0];
-    if (id === undefined) return false;
+function deleteDocument(db: DatabaseSync, fileName: string): boolean {
+    const existing = db.prepare("SELECT id FROM documents WHERE file_name = ?").get(fileName);
+    if (existing === undefined) return false;
 
-    // Delete chunks explicitly: sql.js does not enable foreign_keys by default,
-    // so ON DELETE CASCADE would silently leave orphans behind.
-    db.run("DELETE FROM chunks WHERE document_id = ?", [id]);
-    db.run("DELETE FROM documents WHERE id = ?", [id]);
+    // Delete chunks explicitly rather than rely on ON DELETE CASCADE, which only
+    // works while foreign_keys is on.
+    db.prepare("DELETE FROM chunks WHERE document_id = ?").run(existing.id);
+    db.prepare("DELETE FROM documents WHERE id = ?").run(existing.id);
     return true;
 }
 
 async function processPdf(
-    db: Database,
+    db: DatabaseSync,
     filePath: string,
     provenance: IndexedProvenance = { apiVersion: null, release: null, sourceUrl: null, sha256: null }
 ): Promise<boolean> {
@@ -176,46 +178,56 @@ async function processPdf(
         const title = generateTitle(fileName);
 
         // Re-indexing replaces the previous rows rather than colliding on the
-        // file_name unique index.
-        deleteDocument(db, fileName);
+        // file_name unique index. The savepoint keeps a failure from leaving
+        // the document half-written.
+        let chunkCount = 0;
+        db.exec("SAVEPOINT document");
+        try {
+            deleteDocument(db, fileName);
 
-        db.run(`
-            INSERT INTO documents 
-            (file_name, file_path, category, subcategory, doc_type, title, keywords, api_version, last_updated, source_url, sha256, page_count, size_bytes, priority)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            fileName,
-            filePath,
-            category,
-            subcategory,
-            docType,
-            title,
-            JSON.stringify(keywords),
-            provenance.apiVersion,
-            provenance.release,
-            provenance.sourceUrl,
-            provenance.sha256 ?? sha256(buffer),
-            data.numpages || 0,
-            stats.size,
-            priority
-        ]);
+            const inserted = db.prepare(`
+                INSERT INTO documents 
+                (file_name, file_path, category, subcategory, doc_type, title, keywords, api_version, last_updated, source_url, sha256, page_count, size_bytes, priority)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                fileName,
+                filePath,
+                category,
+                subcategory,
+                docType,
+                title,
+                JSON.stringify(keywords),
+                provenance.apiVersion,
+                provenance.release,
+                provenance.sourceUrl,
+                provenance.sha256 ?? sha256(buffer),
+                data.numpages || 0,
+                stats.size,
+                priority
+            );
+            const documentId = Number(inserted.lastInsertRowid);
 
-        const result = db.exec("SELECT last_insert_rowid() as id");
-        const documentId = result[0].values[0][0] as number;
+            const chunks = chunkText(text, { maxChunkSize: 1500, overlapSize: 150 });
+            const insertChunk = db.prepare(`
+                INSERT INTO chunks (document_id, chunk_index, content, content_lower, section_title)
+                VALUES (?, ?, ?, ?, ?)
+            `);
 
-        const chunks = chunkText(text, { maxChunkSize: 1500, overlapSize: 150 });
-
-        for (const chunk of chunks) {
-            if (chunk.content.length > 50) {
-                db.run(`
-                    INSERT INTO chunks (document_id, chunk_index, content, content_lower, section_title)
-                    VALUES (?, ?, ?, ?, ?)
-                `, [documentId, chunk.index, chunk.content, chunk.content.toLowerCase(), chunk.sectionTitle || null]);
+            chunkCount = chunks.length;
+            for (const chunk of chunks) {
+                if (chunk.content.length > 50) {
+                    insertChunk.run(documentId, chunk.index, chunk.content, chunk.content.toLowerCase(), chunk.sectionTitle || null);
+                }
             }
+            db.exec("RELEASE document");
+        } catch (error) {
+            db.exec("ROLLBACK TO document");
+            db.exec("RELEASE document");
+            throw error;
         }
 
         const stamp = provenance.release ? ` [${provenance.release}]` : "";
-        console.log(`  OK ${fileName}: ${chunks.length} chunks${stamp}`);
+        console.log(`  OK ${fileName}: ${chunkCount} chunks${stamp}`);
         return true;
     } catch (error) {
         console.log(`  FAIL ${fileName}: ${error}`);
@@ -271,44 +283,43 @@ const SCHEMA_CHUNKS = `CREATE TABLE IF NOT EXISTS chunks (
     UNIQUE(document_id, chunk_index)
 )`;
 
-function createSchema(db: Database): void {
-    db.run(SCHEMA_DOCUMENTS);
-    db.run(SCHEMA_CHUNKS);
-    // Note: sql.js doesn't support FTS5, so we use content_lower with LIKE queries
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_subcategory ON documents(subcategory)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_priority ON documents(priority DESC)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id)`);
+function createSchema(db: DatabaseSync): void {
+    db.exec(SCHEMA_DOCUMENTS);
+    db.exec(SCHEMA_CHUNKS);
+    // The FTS5 index is (re)built once all chunks are in: see rebuildFtsIndex
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_subcategory ON documents(subcategory)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_priority ON documents(priority DESC)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id)`);
 }
 
 /**
  * Bring an index built before provenance tracking up to the current schema.
  * Adding columns is cheap and keeps a 520 MB database from needing a rebuild.
  */
-function migrateSchema(db: Database): void {
+function migrateSchema(db: DatabaseSync): void {
     const columns = new Set<string>();
-    const info = db.exec("PRAGMA table_info(documents)");
-    for (const row of info[0]?.values ?? []) columns.add(String(row[1]));
+    for (const row of db.prepare("PRAGMA table_info(documents)").all()) columns.add(String(row.name));
 
     for (const [name, type] of [["source_url", "TEXT"], ["sha256", "TEXT"]] as const) {
         if (!columns.has(name)) {
             console.log(`Migrating schema: adding documents.${name}`);
-            db.run(`ALTER TABLE documents ADD COLUMN ${name} ${type}`);
+            db.exec(`ALTER TABLE documents ADD COLUMN ${name} ${type}`);
         }
     }
 }
 
 /** Fill in release/URL/hash on indexed rows that predate the manifest. */
-function stampProvenance(db: Database, manifest: Manifest): number {
-    const rows = db.exec("SELECT file_name FROM documents WHERE source_url IS NULL OR api_version IS NULL");
-    const unstamped = new Set((rows[0]?.values ?? []).map(r => String(r[0])));
+function stampProvenance(db: DatabaseSync, manifest: Manifest): number {
+    const rows = db.prepare("SELECT file_name FROM documents WHERE source_url IS NULL OR api_version IS NULL").all();
+    const unstamped = new Set(rows.map(r => String(r.file_name)));
+    const stamp = db.prepare(
+        "UPDATE documents SET api_version = COALESCE(api_version, ?), last_updated = COALESCE(last_updated, ?), source_url = ?, sha256 = COALESCE(sha256, ?) WHERE file_name = ?"
+    );
     let count = 0;
     for (const doc of manifest.documents) {
         if (!unstamped.has(doc.fileName) || !doc.url) continue;
-        db.run(
-            "UPDATE documents SET api_version = COALESCE(api_version, ?), last_updated = COALESCE(last_updated, ?), source_url = ?, sha256 = COALESCE(sha256, ?) WHERE file_name = ?",
-            [doc.apiVersion, doc.release, doc.url, doc.sha256, doc.fileName]
-        );
+        stamp.run(doc.apiVersion ?? null, doc.release ?? null, doc.url, doc.sha256 ?? null, doc.fileName);
         count++;
     }
     return count;
@@ -340,11 +351,12 @@ function tryLoadManifest(): Manifest | null {
  * A document is stale when it has been fetched since it was last indexed, has
  * never been indexed, or is absent from the database entirely.
  */
-function selectChangedDocuments(manifest: Manifest, db: Database, filter: (id: string) => boolean): ManifestDocument[] {
+function selectChangedDocuments(manifest: Manifest, db: DatabaseSync, filter: (id: string) => boolean): ManifestDocument[] {
     const dbBuiltAt = statSync(DB_PATH).mtime.toISOString();
     const indexed = new Map<string, string>();
-    const rows = db.exec("SELECT file_name, sha256 FROM documents");
-    for (const row of rows[0]?.values ?? []) indexed.set(String(row[0]), row[1] === null ? "" : String(row[1]));
+    for (const row of db.prepare("SELECT file_name, sha256 FROM documents").all()) {
+        indexed.set(String(row.file_name), row.sha256 === null ? "" : String(row.sha256));
+    }
 
     return manifest.documents.filter(doc => {
         if (!filter(doc.id)) return false;
@@ -388,27 +400,32 @@ async function buildIndex(): Promise<void> {
         process.exit(1);
     }
 
-    console.log("Initializing SQL.js...");
-    const SQL = await initSqlJs();
+    // Every write goes to a copy, swapped in by rename at the end: the MCP server
+    // reads the live file, and a session launched mid-build must not find an
+    // empty or half-written index. Dry runs read the live file and write nothing.
+    const tmpPath = `${DB_PATH}.building`;
+    rmSync(tmpPath, { force: true });
 
-    let db: Database;
+    let db: DatabaseSync;
     let targets: Array<{ path: string; doc: ManifestDocument | undefined }>;
 
     if (changedOnly) {
-        db = new SQL.Database(readFileSync(DB_PATH));
-        migrateSchema(db);
-        createSchema(db);
+        if (dryRun) {
+            db = new DatabaseSync(DB_PATH, { readOnly: true });
+        } else {
+            copyFileSync(DB_PATH, tmpPath);
+            db = openForWriting(tmpPath);
+            migrateSchema(db);
+            createSchema(db);
+        }
 
         const changed = selectChangedDocuments(manifest!, db, filter);
         targets = changed.map(doc => ({ path: documentPath(doc), doc }));
 
-        console.log(`Indexed documents:  ${db.exec("SELECT COUNT(*) FROM documents")[0]?.values[0]?.[0] ?? 0}`);
+        console.log(`Indexed documents:  ${db.prepare("SELECT COUNT(*) AS n FROM documents").get()!.n}`);
         console.log(`Needing reindex:    ${targets.length}`);
     } else {
-        // The existing database stays in place until the new one is complete:
-        // the MCP server loads it at startup, and a session launched during a
-        // 5-10 minute rebuild must not find an empty or half-written file.
-        db = new SQL.Database();
+        db = dryRun ? new DatabaseSync(":memory:") : openForWriting(tmpPath);
         console.log("Creating schema...");
         createSchema(db);
 
@@ -428,28 +445,36 @@ async function buildIndex(): Promise<void> {
         console.log(`Found ${targets.length} PDF files`);
     }
 
-    if (!targets.length) {
-        console.log("\nNothing to index.");
-        if (changedOnly) console.log("The index is up to date with the manifest.");
-        if (changedOnly && manifest && !dryRun) {
-            const stamped = stampProvenance(db, manifest);
-            if (stamped) {
-                console.log(`  stamped provenance on ${stamped} previously indexed documents`);
-                const tmpPath = `${DB_PATH}.building`;
-                writeFileSync(tmpPath, Buffer.from(db.export()));
-                renameSync(tmpPath, DB_PATH);
-            }
-            saveManifest(manifest);
+    if (dryRun) {
+        if (targets.length) {
+            console.log("\nWould index:");
+            for (const target of targets) console.log(`  ${basename(target.path)}`);
+        } else {
+            console.log("\nNothing to index.");
         }
+        console.log("\nDry run - nothing written.");
         db.close();
         return;
     }
 
-    if (dryRun) {
-        console.log("\nWould index:");
-        for (const target of targets) console.log(`  ${basename(target.path)}`);
-        console.log("\nDry run - nothing written.");
+    if (!targets.length) {
+        console.log("\nNothing to index.");
+        if (changedOnly) console.log("The index is up to date with the manifest.");
+        let changed = false;
+        if (changedOnly && manifest) {
+            const stamped = stampProvenance(db, manifest);
+            if (stamped) console.log(`  stamped provenance on ${stamped} previously indexed documents`);
+            changed = stamped > 0;
+        }
+        // An index built before full-text search gets one without re-parsing any PDF
+        if (!hasFtsIndex(db)) {
+            buildFts(db);
+            changed = true;
+        }
         db.close();
+        if (changed) renameSync(tmpPath, DB_PATH);
+        else rmSync(tmpPath, { force: true });
+        if (changedOnly && manifest) saveManifest(manifest);
         return;
     }
 
@@ -485,15 +510,27 @@ async function buildIndex(): Promise<void> {
         }
     }
 
-    const docCount = db.exec("SELECT COUNT(*) FROM documents")[0]?.values[0]?.[0] ?? 0;
-    const chunkCount = db.exec("SELECT COUNT(*) FROM chunks")[0]?.values[0]?.[0] ?? 0;
+    buildFts(db);
+
+    const docCount = db.prepare("SELECT COUNT(*) AS n FROM documents").get()!.n;
+    const chunkCount = db.prepare("SELECT COUNT(*) AS n FROM chunks").get()!.n;
+
+    db.close();
+
+    // A full build only sees PDFs on this machine; the live index may hold more
+    // (legacy editions indexed elsewhere). Never silently swap in a smaller index.
+    const liveCount = !changedOnly && existsSync(DB_PATH) ? countDocuments(DB_PATH) : 0;
+    if (docCount < liveCount && !args.flags.has("allow-shrink")) {
+        rmSync(tmpPath, { force: true });
+        console.error(`\nRefusing to replace the index: the new build has ${docCount} documents, the live index ${liveCount}.`);
+        console.error("Documents whose PDF is not on this machine would be lost. The live index is unchanged.");
+        console.error("Use npm run build-index -- --changed-only, or pass --allow-shrink to replace it anyway.");
+        process.exit(1);
+    }
 
     console.log("\nSaving database...");
-    const buffer = Buffer.from(db.export());
-    // Write beside, then rename: the swap is atomic, so a reader sees either
-    // the old index or the new one, never a truncated file.
-    const tmpPath = `${DB_PATH}.building`;
-    writeFileSync(tmpPath, buffer);
+    const sizeBytes = statSync(tmpPath).size;
+    // Rename is atomic: a reader sees either the old index or the new one
     renameSync(tmpPath, DB_PATH);
 
     // Record what is now indexed, so the next incremental run knows.
@@ -506,11 +543,36 @@ async function buildIndex(): Promise<void> {
     console.log(`Documents failed: ${failCount}`);
     console.log(`Documents in index: ${docCount}`);
     console.log(`Total chunks: ${chunkCount}`);
-    console.log(`Database size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`Database size: ${(sizeBytes / 1024 / 1024).toFixed(2)} MB`);
     console.log(`Database path: ${DB_PATH}`);
-
-    db.close();
     console.log("Done!");
+}
+
+/**
+ * Open the build copy for bulk writes. Journaling and fsync buy nothing here:
+ * a crashed build leaves only the .building file, never a damaged live index.
+ */
+function openForWriting(path: string): DatabaseSync {
+    const db = new DatabaseSync(path);
+    db.exec("PRAGMA journal_mode = OFF");
+    db.exec("PRAGMA synchronous = OFF");
+    return db;
+}
+
+function countDocuments(path: string): number {
+    const db = new DatabaseSync(path, { readOnly: true });
+    try {
+        return Number(db.prepare("SELECT COUNT(*) AS n FROM documents").get()!.n);
+    } finally {
+        db.close();
+    }
+}
+
+function buildFts(db: DatabaseSync): void {
+    console.log("\nBuilding full-text index...");
+    const started = Date.now();
+    rebuildFtsIndex(db);
+    console.log(`  full-text index built in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }
 
 buildIndex().catch(console.error);

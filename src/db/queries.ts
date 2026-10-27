@@ -1,7 +1,7 @@
 /**
  * Database query functions for search and retrieval
- * Uses sql.js for cross-platform compatibility
- * Note: sql.js doesn't support FTS5, so we use LIKE-based search with intent detection
+ * Search runs on the FTS5 index (src/db/fts.ts), ranked by BM25 and document priority,
+ * within the category that intent detection picks
  */
 
 import { getDatabase } from "./database.js";
@@ -13,6 +13,7 @@ import {
 } from "../types.js";
 import { LRUCache } from "lru-cache";
 import { detectIntent, describeIntent } from "../utils/intent.js";
+import { FTS_TABLE, hasFtsIndex, toFtsQuery } from "./fts.js";
 
 // Search result cache
 const searchCache = new LRUCache<string, SearchResult[]>({
@@ -30,49 +31,27 @@ function sanitizeQuery(query: string): string {
     if (query.length > MAX_QUERY_LENGTH) {
         query = query.substring(0, MAX_QUERY_LENGTH);
     }
-    // Remove potentially dangerous characters
-    query = query
+    return query
         .replace(/[<>]/g, '')
         .replace(/[\x00-\x1f]/g, '')
         .trim();
-    
-    // Escape SQL special characters
-    query = query.replace(/'/g, "''");
-    
-    return query;
 }
 
 /**
- * Words that say nothing about which chunk is relevant. LIKE matches substrings, so most of
- * these hit nearly every chunk ("in", "on", "an", "it": 94-99% of chunks; "salesforce": 64%).
- * They still count in the WHERE clause and in scoring, but not when choosing the sample.
- * Leave out words with meaning in Salesforce (before, after, get, set, new, all).
+ * Document priority (1-10) as a multiplier on BM25: priority 10 counts 1.25x, 5 counts 1x.
+ * BM25 is negative (more negative = better), so a larger multiplier ranks higher.
  */
-const STOPWORDS = new Set([
-    'about', 'also', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'been', 'best', 'but',
-    'by', 'can', 'could', 'did', 'do', 'does', 'for', 'from', 'had', 'has', 'have', 'how', 'if',
-    'in', 'into', 'is', 'it', 'its', 'just', 'me', 'my', 'need', 'of', 'on', 'or', 'our',
-    'please', 'should', 'so', 'some', 'than', 'that', 'the', 'their', 'them', 'then', 'there',
-    'these', 'they', 'this', 'those', 'to', 'us', 'use', 'using', 'want', 'was', 'way', 'we',
-    'were', 'what', 'when', 'where', 'which', 'who', 'why', 'will', 'with', 'would', 'you',
-    'your', 'salesforce'
-]);
+const RANK_EXPRESSION = `bm25(${FTS_TABLE}) * (1 + (d.priority - 5) * 0.05)`;
+
+let ftsChecked = false;
 
 /**
- * Build LIKE query patterns from search terms
- */
-function buildSearchPatterns(query: string): string[] {
-    const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-    return words.map(w => `%${w}%`);
-}
-
-/**
- * Search documents using intent-based filtering with LIKE-based text search
+ * Search documents using intent-based filtering over the full-text index
  * 
  * Strategy:
  * 1. Detect intent from query (e.g., "apex trigger" → Apex Development)
  * 2. If high/medium confidence and no explicit filter provided, auto-filter to relevant subcategory
- * 3. Search within filtered scope for highly relevant results
+ * 3. Within that scope, take chunks containing every term; top up with chunks containing any term
  * 4. If too few results, fall back to broader search
  */
 export async function searchDocuments(
@@ -80,6 +59,12 @@ export async function searchDocuments(
     options: SearchOptions = {}
 ): Promise<SearchResult[]> {
     const db = await getDatabase();
+    if (!ftsChecked) {
+        if (!hasFtsIndex(db)) {
+            throw new Error("Search failed: the index has no full-text index yet. Run: npm run build-index -- --changed-only");
+        }
+        ftsChecked = true;
+    }
     const sanitizedQuery = sanitizeQuery(query);
     
     // Detect intent from query
@@ -111,37 +96,31 @@ export async function searchDocuments(
     }
     
     const maxResults = options.maxResults || 5;
-    const searchPatterns = buildSearchPatterns(sanitizedQuery);
-    const searchTerms = sanitizedQuery.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+    const ftsQuery = toFtsQuery(sanitizedQuery);
     
-    if (searchPatterns.length === 0) {
+    if (!ftsQuery) {
         return [];
     }
     
     /**
-     * Execute search with given filters and return scored results
+     * Run one FTS5 match with the given filters, best first
      */
-    const executeSearch = (
-        category: string | undefined, 
-        subcategory: string | undefined,
-        sampleSize: number
-    ): SearchResult[] => {
-        const params: any[] = [];
-        
-        // Build WHERE clause with LIKE conditions
-        const likeConditions = searchPatterns.map((pattern) => {
-            params.push(pattern);
-            return `c.content_lower LIKE ?`;
-        }).join(' OR ');
-        
+    const runMatch = (
+        match: string,
+        category: string | undefined,
+        subcategory: string | undefined
+    ): any[] => {
+        const params: any[] = [match];
         let sql = `
             SELECT 
-                d.id, d.file_name, d.file_path, d.category, d.subcategory,
+                c.id AS chunk_id, d.id, d.file_name, d.file_path, d.category, d.subcategory,
                 d.doc_type, d.title, d.description, d.keywords, d.api_version, d.priority,
-                c.content, c.content_lower, c.section_title, c.page_number
-            FROM chunks c
+                c.content, c.section_title, c.page_number,
+                ${RANK_EXPRESSION} AS rank
+            FROM ${FTS_TABLE}
+            JOIN chunks c ON c.id = ${FTS_TABLE}.rowid
             JOIN documents d ON c.document_id = d.id
-            WHERE (${likeConditions})
+            WHERE ${FTS_TABLE} MATCH ?
         `;
         
         if (category) {
@@ -157,77 +136,58 @@ export async function searchDocuments(
             params.push(options.documentId);
         }
         
-        // Order by number of matched terms, then priority, before limiting: otherwise chunks
-        // matching one common term in high-priority docs fill the sample and crowd out
-        // chunks that match every term. Stopwords don't count (all of them if that's all there is)
-        const contentPatterns = searchPatterns.filter((_, i) => !STOPWORDS.has(searchTerms[i]));
-        const orderPatterns = contentPatterns.length > 0 ? contentPatterns : searchPatterns;
-        const matchedTermCount = orderPatterns.map((pattern) => {
-            params.push(pattern);
-            return `(c.content_lower LIKE ?)`;
-        }).join(' + ');
-        sql += ` ORDER BY (${matchedTermCount}) DESC, d.priority DESC LIMIT ?`;
-        params.push(sampleSize);
+        sql += ` ORDER BY rank LIMIT ?`;
+        params.push(maxResults);
         
-        const stmt = db.prepare(sql);
-        stmt.bind(params);
-        
-        const rows: any[][] = [];
-        const columns = stmt.getColumnNames();
-        while (stmt.step()) {
-            rows.push(stmt.get());
+        return db.prepare(sql).all(...params);
+    };
+    
+    /**
+     * Search with given filters and return scored results
+     */
+    const executeSearch = (
+        category: string | undefined, 
+        subcategory: string | undefined
+    ): SearchResult[] => {
+        // Chunks with every term first; any-term matches only fill the remaining places
+        const rows = runMatch(ftsQuery.all, category, subcategory);
+        if (rows.length < maxResults && ftsQuery.terms.length > 1) {
+            const seen = new Set(rows.map(row => row.chunk_id));
+            for (const row of runMatch(ftsQuery.any, category, subcategory)) {
+                if (rows.length >= maxResults) break;
+                if (!seen.has(row.chunk_id)) rows.push(row);
+            }
         }
-        stmt.free();
         
-        if (rows.length === 0) return [];
-        
-        // Score and rank results
-        const results: SearchResult[] = rows.map((row) => {
-            const getValue = (col: string) => {
-                const idx = columns.indexOf(col);
-                return idx >= 0 ? row[idx] : null;
-            };
-            
-            const contentLower = (getValue('content_lower') as string) || '';
-            const priority = (getValue('priority') as number) || 1;
+        return rows.map((row) => {
+            const content = (row.content as string) || '';
+            const contentLower = content.toLowerCase();
+            const priority = (row.priority as number) || 1;
             
             // Match density: what fraction of search terms appear in this chunk
-            let matchCount = 0;
-            let totalOccurrences = 0;
-            for (const term of searchTerms) {
-                if (contentLower.includes(term)) {
-                    matchCount++;
-                    const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-                    const matches = contentLower.match(regex);
-                    totalOccurrences += matches ? matches.length : 0;
-                }
-            }
-            
-            const matchDensity = searchTerms.length > 0 ? matchCount / searchTerms.length : 0;
-            const occurrenceBonus = Math.min(totalOccurrences * 0.1, 2);
-            
-            // Simple relevance: match density is primary (since we're already filtered by intent)
-            const relevanceScore = (matchDensity * 10) + (priority * 0.2) + occurrenceBonus;
+            const matchCount = ftsQuery.terms.filter(term => term.split(' ').every(part => contentLower.includes(part))).length;
+            const matchDensity = matchCount / ftsQuery.terms.length;
             
             return {
                 document: {
-                    id: getValue('id') as number,
-                    fileName: getValue('file_name') as string,
-                    filePath: getValue('file_path') as string,
-                    category: getValue('category') as DocCategory,
-                    subcategory: getValue('subcategory') as string,
-                    docType: getValue('doc_type') as any,
-                    title: getValue('title') as string,
-                    description: getValue('description') as string,
-                    keywords: getValue('keywords') ? JSON.parse(getValue('keywords') as string) : [],
-                    apiVersion: getValue('api_version') as string,
+                    id: row.id as number,
+                    fileName: row.file_name as string,
+                    filePath: row.file_path as string,
+                    category: row.category as DocCategory,
+                    subcategory: row.subcategory as string,
+                    docType: row.doc_type as any,
+                    title: row.title as string,
+                    description: row.description as string,
+                    keywords: row.keywords ? JSON.parse(row.keywords as string) : [],
+                    apiVersion: row.api_version as string,
                     priority
                 },
-                chunk: getValue('content') as string,
-                score: relevanceScore,
+                chunk: content,
+                // BM25 is negative; report it as a positive "higher is better" score
+                score: Math.round(-row.rank * 100) / 100,
                 matchDensity,
-                sectionTitle: getValue('section_title') as string,
-                highlights: extractHighlights(getValue('content') as string, sanitizedQuery),
+                sectionTitle: row.section_title as string,
+                highlights: extractHighlights(content, sanitizedQuery),
                 detectedIntent: usedIntentFilter ? {
                     category: intent.category,
                     subcategory: intent.subcategory,
@@ -236,30 +196,23 @@ export async function searchDocuments(
                 } : undefined
             };
         });
-        
-        results.sort((a, b) => b.score - a.score);
-        return results;
     };
     
     try {
-        // Determine sample size based on filtering
-        const isFiltered = effectiveCategory || effectiveSubcategory;
-        const sampleSize = isFiltered ? Math.max(maxResults * 10, 100) : Math.max(maxResults * 50, 500);
-        
         // First search: with intent-based or user-provided filters
-        let results = executeSearch(effectiveCategory, effectiveSubcategory, sampleSize);
+        let results = executeSearch(effectiveCategory, effectiveSubcategory);
         
         // Fallback: if intent filter yielded too few results, try broader search
         if (usedIntentFilter && results.length < maxResults) {
             // Try category-only (drop subcategory)
-            const categoryResults = executeSearch(effectiveCategory, undefined, sampleSize);
+            const categoryResults = executeSearch(effectiveCategory, undefined);
             if (categoryResults.length > results.length) {
                 results = categoryResults;
             }
             
             // If still too few, try unfiltered
             if (results.length < maxResults) {
-                const unfilteredResults = executeSearch(undefined, undefined, 500);
+                const unfilteredResults = executeSearch(undefined, undefined);
                 if (unfilteredResults.length > results.length) {
                     results = unfilteredResults;
                 }
@@ -314,16 +267,7 @@ function extractHighlights(content: string, query: string): string[] {
 export async function getDocumentByFileName(fileName: string): Promise<DocumentMetadata | null> {
     const db = await getDatabase();
     
-    // Use prepared statement for parameterized query
-    const stmt = db.prepare(`SELECT * FROM documents WHERE file_name LIKE ? OR file_name = ?`);
-    stmt.bind([`%${fileName}%`, fileName]);
-    
-    const stmtColumns: string[] = stmt.getColumnNames();
-    const stmtRows: any[][] = [];
-    while (stmt.step()) {
-        stmtRows.push(stmt.get());
-    }
-    stmt.free();
+    const stmtRows = db.prepare(`SELECT * FROM documents WHERE file_name LIKE ? OR file_name = ?`).all(`%${fileName}%`, fileName);
     
     if (stmtRows.length === 0) {
         return null;
@@ -331,10 +275,7 @@ export async function getDocumentByFileName(fileName: string): Promise<DocumentM
     
     const row = stmtRows[0];
     
-    const getValue = (col: string) => {
-        const idx = stmtColumns.indexOf(col);
-        return idx >= 0 ? row[idx] : null;
-    };
+    const getValue = (col: string) => row[col] ?? null;
     
     return {
         id: getValue('id') as number,
@@ -360,16 +301,7 @@ export async function getDocumentByFileName(fileName: string): Promise<DocumentM
 export async function getDocumentById(id: number): Promise<DocumentMetadata | null> {
     const db = await getDatabase();
     
-    // Use prepared statement for parameterized query
-    const stmt = db.prepare(`SELECT * FROM documents WHERE id = ?`);
-    stmt.bind([id]);
-    
-    const stmtColumns: string[] = stmt.getColumnNames();
-    const stmtRows: any[][] = [];
-    while (stmt.step()) {
-        stmtRows.push(stmt.get());
-    }
-    stmt.free();
+    const stmtRows = db.prepare(`SELECT * FROM documents WHERE id = ?`).all(id);
     
     if (stmtRows.length === 0) {
         return null;
@@ -377,10 +309,7 @@ export async function getDocumentById(id: number): Promise<DocumentMetadata | nu
     
     const row = stmtRows[0];
     
-    const getValue = (col: string) => {
-        const idx = stmtColumns.indexOf(col);
-        return idx >= 0 ? row[idx] : null;
-    };
+    const getValue = (col: string) => row[col] ?? null;
     
     return {
         id: getValue('id') as number,
@@ -424,24 +353,15 @@ export async function getDocumentContent(
     
     sql += ` ORDER BY chunk_index`;
     
-    // Use prepared statement for parameterized query
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    
-    const stmtColumns: string[] = stmt.getColumnNames();
-    const stmtRows: any[][] = [];
-    while (stmt.step()) {
-        stmtRows.push(stmt.get());
-    }
-    stmt.free();
+    const stmtRows = db.prepare(sql).all(...params);
     
     if (stmtRows.length === 0) {
         return '';
     }
     
     return stmtRows.map(row => {
-        const content = row[stmtColumns.indexOf('content')] as string;
-        const sectionTitle = row[stmtColumns.indexOf('section_title')] as string;
+        const content = row.content as string;
+        const sectionTitle = row.section_title as string;
         
         if (sectionTitle) {
             return `## ${sectionTitle}\n\n${content}`;
@@ -460,59 +380,31 @@ export async function getCategoryStats(): Promise<Array<{
 }>> {
     const db = await getDatabase();
     
-    const catResult = db.exec(`
+    const subStmt = db.prepare(`
+        SELECT 
+            subcategory as name,
+            COUNT(*) as count
+        FROM documents
+        WHERE category = ?
+        GROUP BY subcategory
+        ORDER BY subcategory
+    `);
+    
+    const result = db.prepare(`
         SELECT 
             category,
             COUNT(*) as count
         FROM documents
         GROUP BY category
         ORDER BY category
-    `);
-    
-    if (catResult.length === 0) {
-        return [];
-    }
-    
-    const result = [];
-    const catColumns = catResult[0].columns;
-    
-    for (const row of catResult[0].values) {
-        const category = row[catColumns.indexOf('category')] as string;
-        const count = row[catColumns.indexOf('count')] as number;
-        
-        // Use prepared statement for parameterized query
-        const subStmt = db.prepare(`
-            SELECT 
-                subcategory as name,
-                COUNT(*) as count
-            FROM documents
-            WHERE category = ?
-            GROUP BY subcategory
-            ORDER BY subcategory
-        `);
-        subStmt.bind([category]);
-        
-        const subRows: any[][] = [];
-        while (subStmt.step()) {
-            subRows.push(subStmt.get());
-        }
-        subStmt.free();
-        
-        const subResult = subRows.length > 0 ? [{ values: subRows }] : [];
-        
-        const subcategories = subResult.length > 0 
-            ? subResult[0].values.map(subRow => ({
-                name: subRow[0] as string,
-                count: subRow[1] as number
-            }))
-            : [];
-        
-        result.push({
-            category,
-            count,
-            subcategories
-        });
-    }
+    `).all().map(row => ({
+        category: row.category as string,
+        count: row.count as number,
+        subcategories: subStmt.all(row.category).map(subRow => ({
+            name: subRow.name as string,
+            count: subRow.count as number
+        }))
+    }));
     
     return result;
 }
@@ -526,31 +418,19 @@ export async function getDocumentsByCategory(
 ): Promise<DocumentMetadata[]> {
     const db = await getDatabase();
     
-    // Use prepared statement for parameterized query
-    const stmt = db.prepare(`
+    const stmtRows = db.prepare(`
         SELECT * FROM documents
         WHERE category = ?
         ORDER BY priority DESC, title
         LIMIT ?
-    `);
-    stmt.bind([category, limit]);
-    
-    const stmtColumns: string[] = stmt.getColumnNames();
-    const stmtRows: any[][] = [];
-    while (stmt.step()) {
-        stmtRows.push(stmt.get());
-    }
-    stmt.free();
+    `).all(category, limit);
     
     if (stmtRows.length === 0) {
         return [];
     }
     
     return stmtRows.map(row => {
-        const getValue = (col: string) => {
-            const idx = stmtColumns.indexOf(col);
-            return idx >= 0 ? row[idx] : null;
-        };
+        const getValue = (col: string) => row[col] ?? null;
         
         return {
             id: getValue('id') as number,
@@ -608,21 +488,10 @@ export async function getDocumentSummaries(
     sql += ` ORDER BY priority DESC, title LIMIT ?`;
     params.push(limit);
     
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    
-    const columns: string[] = stmt.getColumnNames();
-    const rows: any[][] = [];
-    while (stmt.step()) {
-        rows.push(stmt.get());
-    }
-    stmt.free();
+    const rows = db.prepare(sql).all(...params);
     
     return rows.map(row => {
-        const getValue = (col: string) => {
-            const idx = columns.indexOf(col);
-            return idx >= 0 ? row[idx] : null;
-        };
+        const getValue = (col: string) => row[col] ?? null;
         
         return {
             id: getValue('id') as number,

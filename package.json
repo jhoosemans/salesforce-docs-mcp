@@ -43,7 +43,7 @@
     "url": "https://github.com/SalesforceDiariesBySanket/salesforce-docs-mcp"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   },
   "files": [
     "dist",
@@ -52,7 +52,6 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "sql.js": "^1.10.0",
     "lru-cache": "^10.0.0",
     "zod": "^3.22.0"
   },

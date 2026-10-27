@@ -1,13 +1,13 @@
 /**
  * Database initialization and connection management
- * Uses sql.js (pure JavaScript SQLite) for cross-platform compatibility
+ * Uses node:sqlite (built into Node) and reads the index from disk; nothing is loaded into memory
  */
 
-// @ts-ignore - sql.js doesn't have types
-import initSqlJs from "sql.js";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
+import { rebuildFtsIndex } from "./fts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,74 +17,45 @@ const PROJECT_ROOT = join(__dirname, "..", "..");
 const DATA_DIR = join(PROJECT_ROOT, "data");
 const DB_PATH = join(DATA_DIR, "salesforce-docs.db");
 
-let db: any = null;
-let SQL: any = null;
+let db: DatabaseSync | null = null;
 
 /**
- * Initialize SQL.js
+ * Get or create database connection.
+ * An existing index opens read-only: the server never writes it, build-index replaces it.
  */
-async function initSql(): Promise<any> {
-    if (!SQL) {
-        SQL = await initSqlJs();
-    }
-    return SQL;
-}
-
-/**
- * Get or create database connection
- */
-export async function getDatabase(): Promise<any> {
+export async function getDatabase(): Promise<DatabaseSync> {
     if (!db) {
-        const sqljs = await initSql();
-        
         // Ensure data directory exists
         if (!existsSync(DATA_DIR)) {
             mkdirSync(DATA_DIR, { recursive: true });
         }
-
-        // Load existing database or create new one
-        if (existsSync(DB_PATH)) {
-            const buffer = readFileSync(DB_PATH);
-            db = new sqljs.Database(buffer);
-        } else {
-            db = new sqljs.Database();
-        }
+        db = existsSync(DB_PATH) ? new DatabaseSync(DB_PATH, { readOnly: true }) : new DatabaseSync(DB_PATH);
     }
     return db;
-}
-
-/**
- * Save database to disk
- */
-function saveDatabase(): void {
-    if (db) {
-        const data = db.export();
-        const buffer = Buffer.from(data);
-        writeFileSync(DB_PATH, buffer);
-    }
 }
 
 /**
  * Initialize database schema
  */
 export async function initializeDatabase(): Promise<void> {
-    const db = await getDatabase();
-
-    // Check if database is already initialized
-    const result = db.exec(`
-        SELECT name FROM sqlite_master 
+    const existing = (await getDatabase()).prepare(`
+        SELECT name FROM sqlite_master
         WHERE type='table' AND name='documents'
-    `);
+    `).get();
 
-    if (result.length > 0 && result[0].values.length > 0) {
+    if (existing) {
         console.error("Database already initialized");
         return;
     }
 
     console.error("Initializing database schema...");
 
+    // The file may exist but be empty, in which case it was opened read-only
+    closeDatabase();
+    db = new DatabaseSync(DB_PATH);
+
     // Create main documents table
-    db.run(`
+    db.exec(`
         CREATE TABLE IF NOT EXISTS documents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_name TEXT NOT NULL UNIQUE,
@@ -104,7 +75,7 @@ export async function initializeDatabase(): Promise<void> {
     `);
 
     // Create document chunks table
-    db.run(`
+    db.exec(`
         CREATE TABLE IF NOT EXISTS chunks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             document_id INTEGER NOT NULL,
@@ -118,19 +89,16 @@ export async function initializeDatabase(): Promise<void> {
         )
     `);
 
-    // Note: sql.js doesn't support FTS5, so we use content_lower column with LIKE queries
-    // and SQLite's built-in text functions for searching
+    // Full-text index over chunks (empty until build-index fills chunks)
+    rebuildFtsIndex(db);
 
     // Create indexes for common queries
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_subcategory ON documents(subcategory)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_priority ON documents(priority DESC)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_subcategory ON documents(subcategory)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_priority ON documents(priority DESC)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id)`);
 
-    // Save to disk
-    saveDatabase();
-    
     console.error("Database schema initialized successfully");
 }
 
@@ -139,7 +107,6 @@ export async function initializeDatabase(): Promise<void> {
  */
 export function closeDatabase(): void {
     if (db) {
-        saveDatabase();
         db.close();
         db = null;
     }
@@ -158,11 +125,8 @@ export function getDatabasePath(): string {
 export async function isDatabaseIndexed(): Promise<boolean> {
     try {
         const db = await getDatabase();
-        const result = db.exec("SELECT COUNT(*) as count FROM documents");
-        if (result.length > 0 && result[0].values.length > 0) {
-            return (result[0].values[0][0] as number) > 0;
-        }
-        return false;
+        const row = db.prepare("SELECT COUNT(*) as count FROM documents").get();
+        return Number(row?.count ?? 0) > 0;
     } catch {
         return false;
     }

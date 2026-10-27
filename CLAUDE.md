@@ -21,7 +21,9 @@ npm run dev              # run the server from source (tsx)
 npm run check-updates                    # read-only CDN diff vs docs/manifest.json; exit 3 = updates
 npm run sync-docs -- --dry-run           # plan + MB total; --only apex,lwc / --kind release_notes
 npm run update-docs                      # sync-docs, then build-index --changed-only
-npm run build-index                      # full rebuild (5-10 min); --changed-only for incremental
+npm run build-index                      # full rebuild from PDFs on disk; --changed-only for incremental.
+                                         # Refuses to replace a bigger live index (--allow-shrink):
+                                         # the live index holds legacy documents whose PDF isn't here
 npm run build-manifest                   # re-derive the manifest (carries recorded state forward)
 npm run test-search                      # 361 search assertions; compare pass count to the previous run
 npm run test-llm-judge                   # LLM-judged relevance
@@ -34,10 +36,11 @@ Restart any running Claude Code session after re-indexing: the server loads the 
 
 ## Architecture
 
-**Server** (`src/`): 9 MCP tools registered in `src/index.ts`. `src/db/database.ts` loads
-`data/salesforce-docs.db` (~450 MB) wholesale into memory with `sql.js` (pure JS, no FTS5).
-Search = `src/utils/intent.ts` (query → category filter) → LIKE over `chunks.content_lower`
-(`src/db/queries.ts`) → LRU cache. Chunks come from `src/utils/chunker.ts` (1500 chars, 150 overlap);
+**Server** (`src/`): 9 MCP tools registered in `src/index.ts`. `src/db/database.ts` opens
+`data/salesforce-docs.db` (~525 MB) read-only from disk with `node:sqlite` (built into Node ≥ 22.13;
+no npm database dependency). Search = `src/utils/intent.ts` (query → category filter) → FTS5 match
+on `chunks_fts`, ranked by BM25 × document priority (`src/db/queries.ts`; query translation and
+index DDL in `src/db/fts.ts`) → LRU cache. Chunks come from `src/utils/chunker.ts` (1500 chars, 150 overlap);
 `src/utils/classifier.ts` maps filenames to category/doc_type/priority. Design doc: `MCP_ARCHITECTURE.md`.
 
 **Corpus** (`docs/`, git-ignored): `docs/pdfs` (developer guides), `docs/release-notes`,
@@ -70,6 +73,9 @@ are kept at their pinned edition; the check is read-only and the scheduled job o
   `git fetch origin` before pushing (the pre-push hook needs `origin/*` to exclude upstream history);
   fresh clones need `GIT_LFS_SKIP_SMUDGE=1`.
 - **Small PDFs**: pass `new Uint8Array(buffer)` to pdf-parse, never the raw Buffer (pool byteOffset).
+- **`chunks_fts` is an external-content FTS5 index**: it does not follow `chunks` by itself.
+  `build-index` rebuilds it (~2 s) after every write; any other script that changes `chunks` must too.
+  Never build FTS queries by hand: `toFtsQuery()` quotes every term, so user input is never FTS5 syntax.
 - `scripts/download-from-salesforce.mjs` and `scripts/refresh-docs.sh` are the superseded, destructive
   path (delete-on-failure). Don't run or extend them.
 - `scripts/final-download-*.ps1` are not run; they survive only as the URL lists `build-manifest` parses.

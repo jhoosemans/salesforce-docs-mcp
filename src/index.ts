@@ -522,19 +522,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
             case "list_doc_categories": {
                 const db = await getDatabase();
-                const catResult = db.exec(`
+                const categories = db.prepare(`
                     SELECT category, COUNT(*) as count
                     FROM documents
                     GROUP BY category
                     ORDER BY category
-                `);
-
-                const categories = catResult.length > 0 
-                    ? catResult[0].values.map(row => ({
-                        category: row[0] as string,
-                        count: row[1] as number
-                    }))
-                    : [];
+                `).all().map(row => ({
+                    category: row.category as string,
+                    count: row.count as number
+                }));
 
                 const formatted = formatCategories(categories);
                 return {
