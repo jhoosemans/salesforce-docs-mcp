@@ -43,6 +43,22 @@ function sanitizeQuery(query: string): string {
 }
 
 /**
+ * Words that say nothing about which chunk is relevant. LIKE matches substrings, so most of
+ * these hit nearly every chunk ("in", "on", "an", "it": 94-99% of chunks; "salesforce": 64%).
+ * They still count in the WHERE clause and in scoring, but not when choosing the sample.
+ * Leave out words with meaning in Salesforce (before, after, get, set, new, all).
+ */
+const STOPWORDS = new Set([
+    'about', 'also', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'been', 'best', 'but',
+    'by', 'can', 'could', 'did', 'do', 'does', 'for', 'from', 'had', 'has', 'have', 'how', 'if',
+    'in', 'into', 'is', 'it', 'its', 'just', 'me', 'my', 'need', 'of', 'on', 'or', 'our',
+    'please', 'should', 'so', 'some', 'than', 'that', 'the', 'their', 'them', 'then', 'there',
+    'these', 'they', 'this', 'those', 'to', 'us', 'use', 'using', 'want', 'was', 'way', 'we',
+    'were', 'what', 'when', 'where', 'which', 'who', 'why', 'will', 'with', 'would', 'you',
+    'your', 'salesforce'
+]);
+
+/**
  * Build LIKE query patterns from search terms
  */
 function buildSearchPatterns(query: string): string[] {
@@ -141,8 +157,16 @@ export async function searchDocuments(
             params.push(options.documentId);
         }
         
-        // Order by priority before limiting to ensure high-priority docs are included
-        sql += ` ORDER BY d.priority DESC LIMIT ?`;
+        // Order by number of matched terms, then priority, before limiting: otherwise chunks
+        // matching one common term in high-priority docs fill the sample and crowd out
+        // chunks that match every term. Stopwords don't count (all of them if that's all there is)
+        const contentPatterns = searchPatterns.filter((_, i) => !STOPWORDS.has(searchTerms[i]));
+        const orderPatterns = contentPatterns.length > 0 ? contentPatterns : searchPatterns;
+        const matchedTermCount = orderPatterns.map((pattern) => {
+            params.push(pattern);
+            return `(c.content_lower LIKE ?)`;
+        }).join(' + ');
+        sql += ` ORDER BY (${matchedTermCount}) DESC, d.priority DESC LIMIT ?`;
         params.push(sampleSize);
         
         const stmt = db.prepare(sql);

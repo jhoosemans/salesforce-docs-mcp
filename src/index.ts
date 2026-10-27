@@ -126,13 +126,13 @@ const TOOLS = [
     {
         name: "search_salesforce_docs",
         description: `Search Salesforce documentation with relevance-ranked results.
-Searches across 360 official Salesforce PDF documents including:
+Searches the indexed official Salesforce PDF documents, including:
 - Apex Developer Guide & Reference
 - REST API, SOAP API, Metadata API, Bulk API
 - Lightning Web Components (LWC)
 - Visualforce, SOQL/SOSL
 - Integration patterns, Security guides
-- Release notes (last 10 years)
+- Release notes (Winter '04 onward)
 
 Results are ranked by match density (how many search terms appear) combined with document priority.
 Returns document ID, relevant excerpts, and source information.`,
