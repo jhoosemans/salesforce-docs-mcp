@@ -178,3 +178,56 @@ HTTP GETs to Salesforce's public documentation.
    nothing under the `core_platform` filter because the current Apex Reference is not indexed.
    It is the largest atlas guide (8,773 pages). *Assumption: include it in the phase-3 pilot
    with the LWC and Apex Developer guides — it is the gap Claude hits most when writing Apex.*
+
+## Phase 3 results — sources pilot, 2026-10-28
+
+**Recommendation: go.** Web pages beat the PDF on every query compared, at no measurable speed cost.
+Making them live is a separate step (below); the live index is untouched by the pilot.
+
+**What was built.** `npm run fetch-pages` downloads the three guides page by page into
+`docs/pages/<guide>/` (git-ignored) with an `index.json` per guide (release, API version, page list,
+ETags). `npm run index-pages` copies the live index to `data/pilot.db` and adds each guide as one
+document whose chunks are page sections titled "Page › Section"; `--replace-pdf` marks the Apex
+Developer Guide PDF superseded by its web edition. `SF_DOCS_DB` points the server and test-search
+at another index file.
+
+**Fetch cost (measured).** 3,566 pages (LWC 689, Apex Developer Guide 548, Apex Reference 2,329),
+0 failures, about 12 minutes at 4 parallel requests; 32 MB of raw pages. Apex Reference "8,773
+pages" in the index above counts anchors; it is 2,329 pages. Version detection is one request per
+atlas guide; the LWC Markdown pages carry no release.
+
+**Index cost (measured).** +17,976 chunks, +38 MB on disk (527 → 565 MB), 3.5 s to index.
+The web Apex Developer Guide holds 2.2 M characters against 2.1 M in the PDF: complete.
+
+| | Live | Pilot A (web + PDFs) | Pilot B (web replaces Apex PDF) |
+|---|---|---|---|
+| test-search, all 382 | 369 | 374 | **374** |
+| original 361 (floor 353) | 351 | 355 | **355** |
+| recency 21 | 18 | 19 | **19** |
+| median / p90 / max ms | 2 / 33 / 128 | 2 / 35 / 133 | 2 / 40 / 142 |
+
+Fixed by the pilot: `Database.getDeleted`, `Database.getUpdated`, LWC component communication,
+LWC parent-to-child, Apex REST recency. Still failing: the 4 typo tests, SSO, platform events,
+SOAP login and Tooling routing (classification, not sources).
+
+**Criterion 7.** LWC "wire decorator", "toast" and "parent to child": met, top 5 are LWC guide
+sections (live: "Lightning | EDITIONS" slices). `Database.getDeleted`: partly met. The top 5 are
+current Apex Reference pages (GetDeletedResult, DeletedRecord), but the method's own section in
+*Database Class* ranks 8th (getUpdated 6th). Short chunks that repeat the phrase win on BM25; a
+title-weighted FTS column would fix it.
+
+**B over A.** Same test score; B removes the PDF slices titled "URLENCODE", "SOAP API",
+"EDITIONS" that A still mixes into Apex top-5s.
+
+**Before it goes live (not built).**
+1. Pipeline: a manifest entry per web guide, `check-updates` comparing the guide version, `sync`
+   re-fetching only changed pages (ETag), and `build-index --changed-only` indexing web guides
+   instead of the separate `index-pages` copy.
+2. Page URL per chunk, so results can cite the exact page (lost in the pilot).
+3. Code blocks: the PDF chunker splits long fenced examples across chunks.
+4. Terms of use (open question 3), unchecked; it matters more once the fork is public and a
+   built index might be distributed.
+5. Optional: title-weighted FTS column (criterion 7, method sections).
+
+**Next candidates** by index size: Object Reference (1,895 pages), Metadata API (707),
+Tooling API (347), UI API (269).

@@ -15,7 +15,8 @@ const __dirname = dirname(__filename);
 // Database path - relative to project root
 const PROJECT_ROOT = join(__dirname, "..", "..");
 const DATA_DIR = join(PROJECT_ROOT, "data");
-const DB_PATH = join(DATA_DIR, "salesforce-docs.db");
+// SF_DOCS_DB points the server (and test-search) at another index, e.g. a pilot copy
+const DB_PATH = process.env.SF_DOCS_DB || join(DATA_DIR, "salesforce-docs.db");
 
 let db: DatabaseSync | null = null;
 
