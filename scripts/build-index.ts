@@ -15,6 +15,8 @@
  *   --allow-shrink   Let a full build replace an index that holds more documents
  *                    (the live index keeps documents whose PDF is not on this machine).
  *   --only <list>    Restrict to matching ids/substrings/globs.
+ *   --reindex <list> With --changed-only: also re-parse these unchanged documents
+ *                    (e.g. after changing their classification).
  *   --dry-run        Report what would be indexed; write nothing.
  *
  * Every indexed document records the release it came from (api_version), its
@@ -77,6 +79,8 @@ const DOCUMENT_PATTERNS: Array<{
     priority: number;
     keywords: string[];
 }> = [
+    // Before /apex/: apex_api.pdf is the SOAP API Developer Guide, not an Apex guide
+    { pattern: /^apex_api\.pdf$/i, category: DocCategory.APIS, subcategory: "soap_api", docType: DocType.API_REFERENCE, priority: 9, keywords: ["soap", "api", "wsdl"] },
     { pattern: /apex/i, category: DocCategory.CORE_PLATFORM, subcategory: "apex", docType: DocType.DEVELOPER_GUIDE, priority: 9, keywords: ["apex", "class", "trigger", "dml"] },
     { pattern: /lwc|lightning/i, category: DocCategory.CORE_PLATFORM, subcategory: "lightning", docType: DocType.DEVELOPER_GUIDE, priority: 9, keywords: ["lwc", "lightning", "component", "aura"] },
     { pattern: /visualforce|pages_dev/i, category: DocCategory.CORE_PLATFORM, subcategory: "visualforce", docType: DocType.DEVELOPER_GUIDE, priority: 7, keywords: ["visualforce", "page", "controller"] },
@@ -123,7 +127,13 @@ function categorizeDocument(fileName: string) {
     };
 }
 
+/** Titles a file name cannot produce */
+const TITLE_OVERRIDES: Record<string, string> = {
+    "apex_api.pdf": "SOAP API Developer Guide"
+};
+
 function generateTitle(fileName: string): string {
+    if (TITLE_OVERRIDES[fileName]) return TITLE_OVERRIDES[fileName];
     return fileName
         .replace(/\.pdf$/i, '')
         .replace(/salesforce_/gi, '')
@@ -527,6 +537,13 @@ async function buildIndex(): Promise<void> {
         }
 
         const changed = selectChangedDocuments(manifest!, db, filter);
+        // --reindex: re-parse named documents that have not changed, e.g. after a classification fix
+        const reindex = args.values.get("reindex") ? makeFilter(args.values.get("reindex")) : null;
+        if (reindex) {
+            for (const doc of manifest!.documents) {
+                if (reindex(doc.id) && !changed.includes(doc) && existsSync(documentPath(doc)) && inspectLocal(documentPath(doc)).isPdf) changed.push(doc);
+            }
+        }
         targets = changed.map(doc => ({ path: documentPath(doc), doc }));
         webTargets = webGuidesNeedingIndex(db, filter);
 

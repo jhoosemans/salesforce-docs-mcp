@@ -143,6 +143,18 @@ const SYNONYMS: Record<string, string[]> = {
  * Detect user intent from a search query
  * Returns category, subcategory, and confidence level
  */
+/**
+ * Whole-word match, plural allowed: "apex" must not match inside "ApexClass" (which sent
+ * "Tooling API query ApexClass" to Apex), "class" not inside "classic". Keywords that start or
+ * end with a symbol ("@wire", "lightning-") keep a substring match on that side.
+ */
+function containsKeyword(text: string, keyword: string): boolean {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const start = /^[a-z0-9]/.test(keyword) ? "(?<![a-z0-9])" : "";
+    const end = /[a-z0-9]$/.test(keyword) ? "(?:e?s)?(?![a-z0-9])" : "";
+    return new RegExp(start + escaped + end).test(text);
+}
+
 export function detectIntent(query: string): DetectedIntent {
     const queryLower = query.toLowerCase();
     const matchedPatterns: string[] = [];
@@ -152,7 +164,7 @@ export function detectIntent(query: string): DetectedIntent {
     const scores = new Map<string, { weight: number; category: string; subcategory: string }>();
     
     for (const pattern of INTENT_PATTERNS) {
-        const matchedKeywords = pattern.keywords.filter(kw => queryLower.includes(kw.toLowerCase()));
+        const matchedKeywords = pattern.keywords.filter(kw => containsKeyword(queryLower, kw.toLowerCase()));
         if (matchedKeywords.length > 0) {
             const key = `${pattern.category}:${pattern.subcategory}`;
             const existing = scores.get(key) || { weight: 0, category: pattern.category, subcategory: pattern.subcategory };

@@ -23,6 +23,8 @@ npm run sync-docs -- --dry-run           # plan + MB total; --only apex,lwc / --
 npm run sync-web -- --dry-run            # web guides (LWC, Apex dev, Apex reference): page counts, no download
 npm run update-docs                      # sync-docs, sync-web, then build-index --changed-only
 npm run build-index                      # full rebuild from PDFs on disk; --changed-only for incremental.
+                                         # --changed-only --reindex <names> re-parses unchanged documents
+                                         # (after a classification change in DOCUMENT_PATTERNS)
                                          # Refuses to replace a bigger live index (--allow-shrink):
                                          # the live index holds legacy documents whose PDF isn't here
 npm run build-manifest                   # re-derive the manifest (carries recorded state forward)

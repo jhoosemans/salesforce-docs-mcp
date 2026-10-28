@@ -229,3 +229,9 @@ the atlas JSON API. Every PDF stays; `salesforce_apex_developer_guide.pdf` is su
   `sync-web` now spaces requests 500 ms apart and stops a guide that stays blocked; failed pages keep
   their previous copy. If a sync reports "rate-limited", re-run it later.
 - **State:** `docs/web-guides.json` (tracked) and `docs/pages/` (git-ignored page cache, 32 MB).
+
+**Update 2026-10-28 (later):** `apex_api.pdf` (the SOAP API Developer Guide) was filed as Apex by the
+`/apex/` filename rule; it now has its own rule and title and was re-indexed with
+`build-index --changed-only --reindex apex_api`. Intent keywords match whole words, so "ApexClass" no
+longer routes Tooling questions to Apex. test-search 377/382, recency 21/21. Backup before this step:
+`data/salesforce-docs.db.bak-2026-10-28-pre-soap`.
