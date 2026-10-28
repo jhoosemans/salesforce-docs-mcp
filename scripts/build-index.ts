@@ -37,6 +37,7 @@ import { hasFtsIndex, rebuildFtsIndex } from "../src/db/fts.js";
 import { DocCategory, DocType } from "../src/types.js";
 import { makeFilter, parseArgs } from "./lib/args.js";
 import { sha256 } from "./lib/http.js";
+import { estimatedCurrentRelease, releaseFromFileName } from "./lib/release.js";
 import { inspectLocal } from "./lib/local.js";
 import {
     Manifest,
@@ -55,6 +56,15 @@ const PDF_DIR = join(PROJECT_ROOT, "docs", "pdfs");
 const RELEASE_NOTES_DIR = join(PROJECT_ROOT, "docs", "release-notes");
 const DATA_DIR = join(PROJECT_ROOT, "data");
 const DB_PATH = join(DATA_DIR, "salesforce-docs.db");
+const SUPERSEDED_PATH = join(PROJECT_ROOT, "docs", "superseded.json");
+
+// Freshness: a document's weight in search ranking by how many releases it trails the
+// newest document in the index. 0.97 per release (10 releases ~ 3 years -> 0.74), never
+// below 0.35 so old documents stay findable; superseded documents (docs/superseded.json)
+// get a further 0.25.
+const FRESHNESS_DECAY_PER_RELEASE = 0.97;
+const FRESHNESS_FLOOR = 0.35;
+const SUPERSEDED_FACTOR = 0.25;
 
 // Document mapping based on filename patterns
 const DOCUMENT_PATTERNS: Array<{
@@ -268,7 +278,11 @@ const SCHEMA_DOCUMENTS = `CREATE TABLE IF NOT EXISTS documents (
     sha256 TEXT,
     page_count INTEGER,
     size_bytes INTEGER,
-    priority INTEGER DEFAULT 5
+    priority INTEGER DEFAULT 5,
+    edition REAL,
+    edition_label TEXT,
+    superseded_by TEXT,
+    freshness REAL
 )`;
 
 const SCHEMA_CHUNKS = `CREATE TABLE IF NOT EXISTS chunks (
@@ -301,7 +315,11 @@ function migrateSchema(db: DatabaseSync): void {
     const columns = new Set<string>();
     for (const row of db.prepare("PRAGMA table_info(documents)").all()) columns.add(String(row.name));
 
-    for (const [name, type] of [["source_url", "TEXT"], ["sha256", "TEXT"]] as const) {
+    const added = [
+        ["source_url", "TEXT"], ["sha256", "TEXT"],
+        ["edition", "REAL"], ["edition_label", "TEXT"], ["superseded_by", "TEXT"], ["freshness", "REAL"]
+    ] as const;
+    for (const [name, type] of added) {
         if (!columns.has(name)) {
             console.log(`Migrating schema: adding documents.${name}`);
             db.exec(`ALTER TABLE documents ADD COLUMN ${name} ${type}`);
@@ -323,6 +341,72 @@ function stampProvenance(db: DatabaseSync, manifest: Manifest): number {
         count++;
     }
     return count;
+}
+
+/**
+ * The release a document describes, as an API version number (Summer '12 = 25, Winter '27 = 68).
+ * Static PDFs have no release in their URL and the manifest stamps them with the current
+ * one, so their age comes from the server's Last-Modified date instead - except release
+ * notes, whose file name says which release they describe.
+ */
+function editionOf(fileName: string, apiVersion: string | null, release: string | null, doc: ManifestDocument | undefined): { edition: number | null; label: string | null } {
+    const releaseNotes = releaseFromFileName(fileName);
+    if (releaseNotes) {
+        apiVersion = releaseNotes.apiVersion;
+        release = releaseNotes.name;
+    } else if ((doc?.urlKind === "static" || !apiVersion) && doc?.lastModified) {
+        const modified = new Date(doc.lastModified);
+        if (!isNaN(modified.getTime())) {
+            const month = modified.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+            return {
+                edition: Number(estimatedCurrentRelease(modified).apiVersion),
+                label: `as of ${month} ${modified.getUTCFullYear()} (undated PDF)`
+            };
+        }
+    }
+    if (!apiVersion || isNaN(Number(apiVersion))) return { edition: null, label: release };
+    // Releases before the API existed (Winter '04) extrapolate to API <= 0: name the release only
+    const api = Number(apiVersion) > 0 ? `API ${apiVersion}` : null;
+    return { edition: Number(apiVersion), label: [release, api && (release ? `(${api})` : api)].filter(Boolean).join(" ") || null };
+}
+
+/** Superseded documents, keyed by file name: docs/superseded.json */
+function loadSuperseded(): Map<string, string> {
+    if (!existsSync(SUPERSEDED_PATH)) return new Map();
+    const list = JSON.parse(readFileSync(SUPERSEDED_PATH, "utf8")).superseded as Array<{ document: string; supersededBy: string }>;
+    return new Map(list.map(entry => [entry.document, entry.supersededBy]));
+}
+
+/**
+ * Stamp every document with its edition, successor and freshness. Freshness is relative
+ * to the newest edition in the index, so it is recomputed for all rows on every build.
+ * Returns the number of rows whose values changed.
+ */
+function stampEditions(db: DatabaseSync, manifest: Manifest | null): number {
+    const byFileName = new Map((manifest?.documents ?? []).map(doc => [doc.fileName, doc]));
+    const superseded = loadSuperseded();
+    const rows = db.prepare("SELECT id, file_name, api_version, last_updated, edition, edition_label, superseded_by, freshness FROM documents").all();
+
+    const editions = rows.map(row => editionOf(row.file_name, row.api_version, row.last_updated, byFileName.get(row.file_name)));
+    const newest = Math.max(...editions.map(e => e.edition ?? 0));
+
+    const update = db.prepare("UPDATE documents SET edition = ?, edition_label = ?, superseded_by = ?, freshness = ? WHERE id = ?");
+    let changed = 0;
+    rows.forEach((row, i) => {
+        const { edition, label } = editions[i];
+        const successor = superseded.get(row.file_name) ?? null;
+        const behind = edition === null ? 0 : newest - edition;
+        const freshness = Math.round(
+            Math.max(FRESHNESS_FLOOR, Math.pow(FRESHNESS_DECAY_PER_RELEASE, behind)) * (successor ? SUPERSEDED_FACTOR : 1) * 1000
+        ) / 1000;
+        if (row.edition === edition && row.edition_label === label && row.superseded_by === successor && row.freshness === freshness) return;
+        update.run(edition, label, successor, freshness, row.id);
+        changed++;
+    });
+
+    const unknown = [...superseded.keys()].filter(name => !rows.some(row => row.file_name === name));
+    if (unknown.length) console.log(`  docs/superseded.json names documents not in the index: ${unknown.join(", ")}`);
+    return changed;
 }
 
 function provenanceFor(doc: ManifestDocument | undefined): IndexedProvenance {
@@ -466,6 +550,11 @@ async function buildIndex(): Promise<void> {
             if (stamped) console.log(`  stamped provenance on ${stamped} previously indexed documents`);
             changed = stamped > 0;
         }
+        const restamped = stampEditions(db, manifest);
+        if (restamped) {
+            console.log(`  stamped edition and freshness on ${restamped} documents`);
+            changed = true;
+        }
         // An index built before full-text search gets one without re-parsing any PDF
         if (!hasFtsIndex(db)) {
             buildFts(db);
@@ -509,6 +598,9 @@ async function buildIndex(): Promise<void> {
             }
         }
     }
+
+    const restamped = stampEditions(db, manifest);
+    if (restamped) console.log(`  stamped edition and freshness on ${restamped} documents`);
 
     buildFts(db);
 

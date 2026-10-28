@@ -70,7 +70,11 @@ export async function initializeDatabase(): Promise<void> {
             last_updated TEXT,
             page_count INTEGER,
             size_bytes INTEGER,
-            priority INTEGER DEFAULT 5 CHECK(priority >= 1 AND priority <= 10)
+            priority INTEGER DEFAULT 5 CHECK(priority >= 1 AND priority <= 10),
+            edition REAL,
+            edition_label TEXT,
+            superseded_by TEXT,
+            freshness REAL
         )
     `);
 

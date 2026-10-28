@@ -1,0 +1,125 @@
+{
+  "description": "Legacy documents whose subject a newer document in the index covers. build-index copies this into documents.superseded_by; search ranks a superseded document far below its successor. Hand-maintained; reviewed by Jesse on 2026-10-27 (PRD_SEARCH_V2.md, phase 2).",
+  "superseded": [
+    {
+      "document": "dbcom_apex_language_reference.pdf",
+      "supersededBy": "salesforce_apex_developer_guide.pdf"
+    },
+    {
+      "document": "api_apex_rest.pdf",
+      "supersededBy": "salesforce_apex_developer_guide.pdf"
+    },
+    {
+      "document": "apex_workbook.pdf",
+      "supersededBy": "salesforce_apex_developer_guide.pdf"
+    },
+    {
+      "document": "dbcom_api_rest.pdf",
+      "supersededBy": "api_rest.pdf"
+    },
+    {
+      "document": "dbcom_api_streaming.pdf",
+      "supersededBy": "api_streaming.pdf"
+    },
+    {
+      "document": "dbcom_chatter_rest_api.pdf",
+      "supersededBy": "salesforce_chatter_rest_api.pdf"
+    },
+    {
+      "document": "dbcom_api_asynch.pdf",
+      "supersededBy": "api_asynch.pdf"
+    },
+    {
+      "document": "dbcom_api_meta.pdf",
+      "supersededBy": "api_meta.pdf"
+    },
+    {
+      "document": "sforce_API.pdf",
+      "supersededBy": "apex_api.pdf"
+    },
+    {
+      "document": "bi_dev_guide_eql.pdf",
+      "supersededBy": "bi_dev_guide_saql.pdf"
+    },
+    {
+      "document": "limits_limitations.pdf",
+      "supersededBy": "salesforce_app_limits_cheatsheet.pdf"
+    },
+    {
+      "document": "salesforce_query_search_optimization_developer_cheatsheet.pdf",
+      "supersededBy": "static_salesforce_query_search_optimization_developer_cheatsheet.pdf"
+    },
+    {
+      "document": "record_locking_cheatsheet.pdf",
+      "supersededBy": "static_SF_Record-Locking-Cheatsheet_web.pdf"
+    },
+    {
+      "document": "static_SF_LightningComponents_cheatsheet_web.pdf",
+      "supersededBy": "Lightning_Components_Cheatsheet.pdf"
+    },
+    {
+      "document": "salesforce_territories_implementation_guide.pdf",
+      "supersededBy": "salesforce_implementing_territory_mgmt2_guide.pdf"
+    },
+    {
+      "document": "tm_decision_guide.pdf",
+      "supersededBy": "salesforce_implementing_territory_mgmt2_guide.pdf"
+    },
+    {
+      "document": "servicesdk_0_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_206_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_208_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_210_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_214_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_218_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_220_service_sdk_android.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_android.pdf"
+    },
+    {
+      "document": "servicesdk_1_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "servicesdk_2_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "servicesdk_208_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "servicesdk_210_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "servicesdk_214_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "servicesdk_218_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "servicesdk_220_service_sdk_ios.pdf",
+      "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    }
+  ]
+}

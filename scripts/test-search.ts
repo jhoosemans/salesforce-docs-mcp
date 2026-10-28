@@ -49,6 +49,8 @@ interface TestCase {
     expectedSource?: string;          // Golden Document ID: exact source filename expected in top 3 results
     expectedSourcePosition?: number;  // Position where golden doc should appear (1, 2, or 3). Default: anywhere in top 3
     useExpansion?: boolean;           // For SEMANTIC tests: use query expansion before search
+    minEdition?: number;              // Recency: every top-3 result describes at least this API version
+    noSuperseded?: boolean;           // Recency: no top-3 result is superseded (docs/superseded.json)
 }
 
 // Performance thresholds by test type (in milliseconds)
@@ -1503,8 +1505,63 @@ const TEST_QUERIES: TestCase[] = [
     },
     
     // ==================== DIVERSITY EXPANSION (200+ Compact Tests) ====================
-    ...getDiversityTests()
+    ...getDiversityTests(),
+
+    // ==================== RECENCY (PRD_SEARCH_V2 phase 2) ====================
+    ...getRecencyTests()
 ];
+
+/**
+ * Subjects where the index holds a legacy edition next to a current guide: the current
+ * one must win. Criterion: no top-3 result older than API 50 (Spring '21) or superseded,
+ * unless the query names a release.
+ */
+function getRecencyTests(): TestCase[] {
+    const subjects: [string, string[]][] = [
+        ["Chatter REST API feed elements", ["Feed"]],
+        ["Metadata API deploy zip file", ["Deploy"]],
+        ["Apex REST service RestResource annotation", ["RestResource"]],
+        ["Streaming API PushTopic subscribe", ["PushTopic"]],
+        ["Bulk API create job", ["Job"]],
+        ["REST API query resource", ["Query"]],
+        ["Apex trigger context variables", ["Trigger"]],
+        ["Database.executeBatch scope size", ["executeBatch"]],
+        ["SOAP API login call", ["Login"]],
+        ["SAQL query syntax", ["SAQL"]],
+        ["Apex governor limits per transaction", ["Limit"]],
+        ["Apex test class isTest annotation", ["isTest"]],
+        ["SOQL relationship queries parent child", ["Relationship"]],
+        ["publish platform events from Apex", ["Event"]],
+        ["Apex callout named credentials", ["Named Credential"]],
+        ["Apex sharing without sharing keywords", ["Sharing"]],
+        ["Metadata API retrieve package.xml", ["package.xml"]],
+        ["Tooling API query ApexClass", ["Tooling"]],
+        ["Apex DML insert update upsert", ["Upsert"]],
+        ["SOSL FIND IN ALL FIELDS RETURNING", ["SOSL"]],
+    ];
+    const tests: TestCase[] = subjects.map(([query, keywords]) => ({
+        query,
+        category: undefined,
+        type: 'POSITIVE',
+        description: `Recency: ${query}`,
+        expectedBehavior: "Current guide on top, no legacy or superseded edition in the top 3",
+        expectedKeywords: keywords,
+        minEdition: 50,
+        noSuperseded: true
+    }));
+    // Naming a release switches freshness off: an old release must still be found
+    tests.push({
+        query: "Spring '22 release notes Lightning Web Components",
+        category: undefined,
+        type: 'POSITIVE',
+        description: "Recency: a named old release is still found",
+        expectedBehavior: "Spring '22 release notes in the top 3 despite their age",
+        expectedKeywords: ["Lightning"],
+        expectedSource: "ReleaseNotes_Spring_22",
+        expectedSourcePosition: 1
+    });
+    return tests;
+}
 
 // Helper to generate diversity tests
 function getDiversityTests(): TestCase[] {
@@ -2162,6 +2219,23 @@ async function testSearch(): Promise<void> {
                     
                     if (goldenDocFound) {
                         console.log(`   🎯 Golden Doc: "${test.expectedSource}" found at position #${goldenDocPosition}`);
+                    }
+                }
+
+                // ========== RECENCY VALIDATION (PRD_SEARCH_V2 phase 2) ==========
+                if (passed && (test.minEdition !== undefined || test.noSuperseded)) {
+                    for (const result of results.slice(0, 3)) {
+                        const doc = result.document;
+                        if (test.minEdition !== undefined && doc.edition !== undefined && doc.edition < test.minEdition) {
+                            passed = false;
+                            error = `Legacy result in top 3: "${doc.title}" (${doc.editionLabel}) is older than API ${test.minEdition}`;
+                            break;
+                        }
+                        if (test.noSuperseded && doc.supersededBy) {
+                            passed = false;
+                            error = `Superseded result in top 3: "${doc.title}" (superseded by ${doc.supersededBy})`;
+                            break;
+                        }
                     }
                 }
 

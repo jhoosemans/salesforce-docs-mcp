@@ -7,6 +7,16 @@ import { SearchResult, DocumentMetadata, CATEGORY_LABELS, DocCategory } from "..
 /**
  * Format search results for display
  */
+/**
+ * Which release a document describes, and whether a newer document replaces it
+ */
+function formatEdition(doc: DocumentMetadata): string | null {
+    if (!doc.editionLabel) return null;
+    return doc.supersededBy
+        ? `${doc.editionLabel} - superseded by ${doc.supersededBy}; prefer that document`
+        : doc.editionLabel;
+}
+
 export function formatSearchResults(results: SearchResult[], query: string): string {
     if (results.length === 0) {
         return `No results found for: "${query}"
@@ -37,6 +47,8 @@ Try:
         lines.push(`### ${i + 1}. ${document.title}`);
         lines.push(`**Document ID:** ${document.id}`);
         lines.push(`**Source:** ${document.fileName}`);
+        const edition = formatEdition(document);
+        if (edition) lines.push(`**Edition:** ${edition}`);
         lines.push(`**Category:** ${CATEGORY_LABELS[document.category as DocCategory] || document.category}`);
         
         if (sectionTitle) {
@@ -113,7 +125,10 @@ export function formatDocument(doc: DocumentMetadata, content: string): string {
         lines.push(`**Keywords:** ${doc.keywords.join(", ")}`);
     }
 
-    if (doc.apiVersion) {
+    const edition = formatEdition(doc);
+    if (edition) {
+        lines.push(`**Edition:** ${edition}`);
+    } else if (doc.apiVersion) {
         lines.push(`**API Version:** ${doc.apiVersion}`);
     }
 
@@ -203,6 +218,8 @@ Try:
         const { document, chunk, sectionTitle } = result;
         
         lines.push(`### From: ${document.title}`);
+        const edition = formatEdition(document);
+        if (edition) lines.push(`**Edition:** ${edition}`);
         if (sectionTitle) {
             lines.push(`**Section:** ${sectionTitle}`);
         }

@@ -116,6 +116,9 @@ export interface DocumentMetadata {
     pageCount?: number;
     sizeBytes?: number;
     priority: number;  // 1-10, for search ranking boost
+    edition?: number;  // release as API version (Summer '12 = 25); static PDFs dated by Last-Modified
+    editionLabel?: string;  // e.g. "Winter '27 (API 68.0)" or "as of May 2015 (undated PDF)"
+    supersededBy?: string;  // file name of the newer document covering the same subject
 }
 
 // Document chunk interface

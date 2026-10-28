@@ -39,11 +39,25 @@ function sanitizeQuery(query: string): string {
 
 /**
  * Document priority (1-10) as a multiplier on BM25: priority 10 counts 1.25x, 5 counts 1x.
+ * Freshness (0.09-1, stamped by build-index) pushes old and superseded documents down.
  * BM25 is negative (more negative = better), so a larger multiplier ranks higher.
  */
-const RANK_EXPRESSION = `bm25(${FTS_TABLE}) * (1 + (d.priority - 5) * 0.05)`;
+const PRIORITY_FACTOR = `(1 + (d.priority - 5) * 0.05)`;
+const RANK_BY_RELEVANCE = `bm25(${FTS_TABLE}) * ${PRIORITY_FACTOR}`;
+const RANK_WITH_FRESHNESS = `${RANK_BY_RELEVANCE} * COALESCE(d.freshness, 1)`;
+
+// "Spring '22", "summer 24", "Winter_27": the question is about that release, so
+// its age must not count against it
+const NAMED_RELEASE = /\b(spring|summer|winter)[\s_'’]*\d{2}\b/i;
+
+// Below this freshness (about 7 releases behind, or superseded) an every-term match no longer
+// wins outright; it competes with any-term matches at ALL_TERMS_BONUS times its rank.
+// Measured 2026-10-27: test-search 348 -> 351; bonus 1.5-3 makes no difference.
+const STALE_FRESHNESS = 0.5;
+const ALL_TERMS_BONUS = 2;
 
 let ftsChecked = false;
+let hasFreshness = false;
 
 /**
  * Search documents using intent-based filtering over the full-text index
@@ -63,6 +77,7 @@ export async function searchDocuments(
         if (!hasFtsIndex(db)) {
             throw new Error("Search failed: the index has no full-text index yet. Run: npm run build-index -- --changed-only");
         }
+        hasFreshness = db.prepare(`SELECT 1 FROM pragma_table_info('documents') WHERE name = 'freshness'`).get() !== undefined;
         ftsChecked = true;
     }
     const sanitizedQuery = sanitizeQuery(query);
@@ -76,8 +91,13 @@ export async function searchDocuments(
     let effectiveSubcategory = options.subcategory;
     let usedIntentFilter = false;
     
-    // Apply intent-based filtering if no explicit filter and confidence is sufficient
-    if (!options.category && !options.subcategory && intent.confidence !== 'low' && intent.subcategory) {
+    // A question naming a release ("Spring '22") is about what changed in it: search the
+    // release notes first. Otherwise apply intent-based filtering if confidence is sufficient
+    const namesRelease = NAMED_RELEASE.test(sanitizedQuery);
+    if (!options.category && !options.subcategory && namesRelease) {
+        effectiveCategory = DocCategory.RELEASE_NOTES;
+        usedIntentFilter = true;
+    } else if (!options.category && !options.subcategory && intent.confidence !== 'low' && intent.subcategory) {
         effectiveSubcategory = intent.subcategory;
         effectiveCategory = intent.category as DocCategory;
         usedIntentFilter = true;
@@ -97,6 +117,8 @@ export async function searchDocuments(
     
     const maxResults = options.maxResults || 5;
     const ftsQuery = toFtsQuery(sanitizedQuery);
+    const rankExpression = hasFreshness && !namesRelease ? RANK_WITH_FRESHNESS : RANK_BY_RELEVANCE;
+    const editionColumns = hasFreshness ? `d.edition, d.edition_label, d.superseded_by, d.freshness` : `NULL AS edition, NULL AS edition_label, NULL AS superseded_by, NULL AS freshness`;
     
     if (!ftsQuery) {
         return [];
@@ -114,9 +136,9 @@ export async function searchDocuments(
         let sql = `
             SELECT 
                 c.id AS chunk_id, d.id, d.file_name, d.file_path, d.category, d.subcategory,
-                d.doc_type, d.title, d.description, d.keywords, d.api_version, d.priority,
+                d.doc_type, d.title, d.description, d.keywords, d.api_version, d.priority, ${editionColumns},
                 c.content, c.section_title, c.page_number,
-                ${RANK_EXPRESSION} AS rank
+                ${rankExpression} AS rank
             FROM ${FTS_TABLE}
             JOIN chunks c ON c.id = ${FTS_TABLE}.rowid
             JOIN documents d ON c.document_id = d.id
@@ -149,13 +171,20 @@ export async function searchDocuments(
         category: string | undefined, 
         subcategory: string | undefined
     ): SearchResult[] => {
-        // Chunks with every term first; any-term matches only fill the remaining places
-        const rows = runMatch(ftsQuery.all, category, subcategory);
-        if (rows.length < maxResults && ftsQuery.terms.length > 1) {
+        // Chunks with every term first; any-term matches fill the remaining places.
+        // When an every-term chunk comes from an old or superseded document, rank both
+        // sets together instead, so a current document matching most terms can win.
+        let rows = runMatch(ftsQuery.all, category, subcategory);
+        const stale = rows.some(row => (row.freshness ?? 1) < STALE_FRESHNESS);
+        if (ftsQuery.terms.length > 1 && (rows.length < maxResults || stale)) {
             const seen = new Set(rows.map(row => row.chunk_id));
-            for (const row of runMatch(ftsQuery.any, category, subcategory)) {
-                if (rows.length >= maxResults) break;
-                if (!seen.has(row.chunk_id)) rows.push(row);
+            const others = runMatch(ftsQuery.any, category, subcategory).filter(row => !seen.has(row.chunk_id));
+            if (stale) {
+                rows = [...rows.map(row => ({ ...row, rank: row.rank * ALL_TERMS_BONUS })), ...others]
+                    .sort((x, y) => x.rank - y.rank)
+                    .slice(0, maxResults);
+            } else {
+                rows.push(...others.slice(0, maxResults - rows.length));
             }
         }
         
@@ -180,7 +209,10 @@ export async function searchDocuments(
                     description: row.description as string,
                     keywords: row.keywords ? JSON.parse(row.keywords as string) : [],
                     apiVersion: row.api_version as string,
-                    priority
+                    priority,
+                    edition: row.edition ?? undefined,
+                    editionLabel: row.edition_label ?? undefined,
+                    supersededBy: row.superseded_by ?? undefined
                 },
                 chunk: content,
                 // BM25 is negative; report it as a positive "higher is better" score
@@ -291,7 +323,9 @@ export async function getDocumentByFileName(fileName: string): Promise<DocumentM
         lastUpdated: getValue('last_updated') as string,
         pageCount: getValue('page_count') as number,
         sizeBytes: getValue('size_bytes') as number,
-        priority: getValue('priority') as number
+        priority: getValue('priority') as number,
+        editionLabel: getValue('edition_label') ?? undefined,
+        supersededBy: getValue('superseded_by') ?? undefined
     };
 }
 
@@ -325,7 +359,9 @@ export async function getDocumentById(id: number): Promise<DocumentMetadata | nu
         lastUpdated: getValue('last_updated') as string,
         pageCount: getValue('page_count') as number,
         sizeBytes: getValue('size_bytes') as number,
-        priority: getValue('priority') as number
+        priority: getValue('priority') as number,
+        editionLabel: getValue('edition_label') ?? undefined,
+        supersededBy: getValue('superseded_by') ?? undefined
     };
 }
 
@@ -446,7 +482,9 @@ export async function getDocumentsByCategory(
             lastUpdated: getValue('last_updated') as string,
             pageCount: getValue('page_count') as number,
             sizeBytes: getValue('size_bytes') as number,
-            priority: getValue('priority') as number
+            priority: getValue('priority') as number,
+            editionLabel: getValue('edition_label') ?? undefined,
+            supersededBy: getValue('superseded_by') ?? undefined
         };
     });
 }
