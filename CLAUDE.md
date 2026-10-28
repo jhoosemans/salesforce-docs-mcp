@@ -21,6 +21,7 @@ npm run dev              # run the server from source (tsx)
 npm run check-updates                    # read-only CDN diff vs docs/manifest.json; exit 3 = updates
 npm run sync-docs -- --dry-run           # plan + MB total; --only apex,lwc / --kind release_notes
 npm run sync-web -- --dry-run            # web guides (LWC, Apex dev, Apex reference): page counts, no download
+npm run import-help-snapshot -- --snapshot sso --title "..." <export.json>   # Help articles read in a browser
 npm run update-docs                      # sync-docs, sync-web, then build-index --changed-only
 npm run build-index                      # full rebuild from PDFs on disk; --changed-only for incremental.
                                          # --changed-only --reindex <names> re-parses unchanged documents
@@ -67,6 +68,12 @@ re-indexes a guide only when its content hash changed. Each guide is one documen
 sections with `page_url` and `search_title`, which `chunks_fts` weights `TITLE_WEIGHT` x above body
 text. A PDF a web guide replaces is superseded in `docs/superseded.json`, never deleted, and only
 while its successor is in the index.
+
+**Help snapshots** (`scripts/lib/help-snapshots.ts`): Salesforce Help articles with no PDF or machine-
+readable route (single sign-on), read once in the built-in browser with `scripts/help-snapshot-reader.js`,
+written to `docs/help/<snapshot>/` (git-ignored: Salesforce's content, local use only - never commit it
+or ship it in a shared index) by `import-help-snapshot`, indexed by `build-index` as one dated document.
+No check can see Help change: refresh by hand (MAINTENANCE.md).
 
 Decisions already made — don't re-litigate: developer guides replace in place, release notes
 accumulate; retired documents stay in the index (`--prune` exists, default off); frozen legacy docs

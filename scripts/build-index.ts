@@ -41,7 +41,22 @@ import { makeFilter, parseArgs } from "./lib/args.js";
 import { sha256 } from "./lib/http.js";
 import { estimatedCurrentRelease, releaseFromFileName } from "./lib/release.js";
 import { inspectLocal } from "./lib/local.js";
-import { indexWebGuide, webGuidesNeedingIndex, type WebGuide } from "./lib/web-guides.js";
+import { indexWebGuide, webGuidesNeedingIndex } from "./lib/web-guides.js";
+import { indexSnapshot, snapshotsNeedingIndex } from "./lib/help-snapshots.js";
+
+/** A document indexed from pages rather than a PDF: a web guide or a Help snapshot */
+interface PageSource {
+    fileName: string;
+    kind: string;
+    index(db: DatabaseSync): { pages: number; chunks: number };
+}
+
+function pageSourcesNeedingIndex(db: DatabaseSync, filter: (id: string) => boolean): PageSource[] {
+    return [
+        ...webGuidesNeedingIndex(db, filter).map(guide => ({ fileName: guide.fileName, kind: "web pages", index: (target: DatabaseSync) => indexWebGuide(target, guide) })),
+        ...snapshotsNeedingIndex(db, filter).map(snapshot => ({ fileName: snapshot.fileName, kind: "Help snapshot", index: (target: DatabaseSync) => indexSnapshot(target, snapshot) }))
+    ];
+}
 import {
     Manifest,
     ManifestDocument,
@@ -525,7 +540,7 @@ async function buildIndex(): Promise<void> {
 
     let db: DatabaseSync;
     let targets: Array<{ path: string; doc: ManifestDocument | undefined }>;
-    let webTargets: WebGuide[];
+    let webTargets: PageSource[];
 
     if (changedOnly) {
         if (dryRun) {
@@ -546,10 +561,10 @@ async function buildIndex(): Promise<void> {
             }
         }
         targets = changed.map(doc => ({ path: documentPath(doc), doc }));
-        webTargets = webGuidesNeedingIndex(db, filter);
+        webTargets = pageSourcesNeedingIndex(db, filter);
 
         console.log(`Indexed documents:  ${db.prepare("SELECT COUNT(*) AS n FROM documents").get()!.n}`);
-        console.log(`Needing reindex:    ${targets.length}${webTargets.length ? ` PDFs, ${webTargets.length} web guides` : ""}`);
+        console.log(`Needing reindex:    ${targets.length}${webTargets.length ? ` PDFs, ${webTargets.length} from pages` : ""}`);
     } else {
         db = dryRun ? new DatabaseSync(":memory:") : openForWriting(tmpPath);
         console.log("Creating schema...");
@@ -569,15 +584,15 @@ async function buildIndex(): Promise<void> {
             .filter(path => filter(basename(path).replace(/\.pdf$/i, "")))
             .map(path => ({ path, doc: byFileName.get(basename(path)) }));
         console.log(`Found ${targets.length} PDF files`);
-        webTargets = webGuidesNeedingIndex(db, filter);
-        if (webTargets.length) console.log(`Found ${webTargets.length} web guides`);
+        webTargets = pageSourcesNeedingIndex(db, filter);
+        if (webTargets.length) console.log(`Found ${webTargets.length} documents from pages`);
     }
 
     if (dryRun) {
         if (targets.length || webTargets.length) {
             console.log("\nWould index:");
             for (const target of targets) console.log(`  ${basename(target.path)}`);
-            for (const guide of webTargets) console.log(`  ${guide.fileName} (web pages)`);
+            for (const source of webTargets) console.log(`  ${source.fileName} (${source.kind})`);
         } else {
             console.log("\nNothing to index.");
         }
@@ -613,7 +628,7 @@ async function buildIndex(): Promise<void> {
         return;
     }
 
-    console.log(targets.length ? "\nProcessing PDFs..." : "\nProcessing web guides...");
+    console.log(targets.length ? "\nProcessing PDFs..." : "\nProcessing documents from pages...");
     let successCount = 0;
     let failCount = 0;
     const indexedAt = new Date().toISOString();
@@ -631,7 +646,7 @@ async function buildIndex(): Promise<void> {
         const started = Date.now();
         db.exec("SAVEPOINT web_guide");
         try {
-            const { pages, chunks } = indexWebGuide(db, guide);
+            const { pages, chunks } = guide.index(db);
             db.exec("RELEASE web_guide");
             console.log(`  ${guide.fileName}: ${pages} pages -> ${chunks} chunks (${((Date.now() - started) / 1000).toFixed(1)}s)`);
             successCount++;

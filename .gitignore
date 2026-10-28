@@ -60,3 +60,4 @@ data/*.building
 data/check.log
 data/launchd.log
 docs/pages/
+docs/help/

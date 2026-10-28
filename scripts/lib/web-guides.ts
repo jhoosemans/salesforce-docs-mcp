@@ -437,16 +437,27 @@ export function indexWebGuide(db: DatabaseSync, guide: WebGuide): { pages: numbe
         indexKey(recorded), pageIndex.pages.length
     ).lastInsertRowid);
 
+    const chunks = insertPageChunks(db, documentId, pageIndex.pages.map(page => {
+        const { title, text } = pageText(guide, readFileSync(join(dir, page.file), "utf8"));
+        return { title: title || page.title, text, url: page.url };
+    }));
+    return { pages: pageIndex.pages.length, chunks };
+}
+
+/**
+ * Write a document's pages as chunks: each page section becomes chunks that start with its
+ * "Page › Section" title, which also goes to chunks.search_title (weighted in the full-text index).
+ * Shared by web guides and Help snapshots. Returns the number of chunks.
+ */
+export function insertPageChunks(db: DatabaseSync, documentId: number, pages: Array<{ title: string; text: string; url: string }>): number {
     const insertChunk = db.prepare(`
         INSERT INTO chunks (document_id, chunk_index, content, content_lower, section_title, page_number, page_url, search_title)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     let chunkIndex = 0;
-    pageIndex.pages.forEach((page, pageNumber) => {
-        const { title, text } = pageText(guide, readFileSync(join(dir, page.file), "utf8"));
-        const pageTitle = title || page.title;
-        for (const section of splitSections(pageTitle, text)) {
-            const qualified = qualifiedName(pageTitle, section.heading);
+    pages.forEach((page, pageNumber) => {
+        for (const section of splitSections(page.title, page.text)) {
+            const qualified = qualifiedName(page.title, section.heading);
             const header = qualified ? `${section.title}\n${qualified}` : section.title;
             for (const piece of packChunks(section.text, MAX_CHUNK)) {
                 const content = `${header}\n\n${piece}`;
@@ -454,5 +465,5 @@ export function indexWebGuide(db: DatabaseSync, guide: WebGuide): { pages: numbe
             }
         }
     });
-    return { pages: pageIndex.pages.length, chunks: chunkIndex };
+    return chunkIndex;
 }

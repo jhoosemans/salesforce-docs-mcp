@@ -16,6 +16,7 @@
     "sync-docs": "tsx scripts/sync-docs.ts",
     "build-index": "tsx scripts/build-index.ts",
     "sync-web": "tsx scripts/sync-web.ts",
+    "import-help-snapshot": "tsx scripts/import-help-snapshot.ts",
     "update-docs": "npm run sync-docs && npm run sync-web && npm run build-index -- --changed-only",
     "typecheck": "tsc --noEmit -p tsconfig.scripts.json",
     "test-search": "tsx scripts/test-search.ts",

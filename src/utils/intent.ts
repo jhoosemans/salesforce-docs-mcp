@@ -99,6 +99,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
     // Security
     { keywords: ['security', 'permission', 'sharing', 'fls', 'field level security'], category: 'security', subcategory: 'security', weight: 10 },
     { keywords: ['oauth', 'connected app', 'jwt', 'authentication'], category: 'security', subcategory: 'security', weight: 10 },
+    { keywords: ['sso', 'saml', 'single sign-on', 'single sign on', 'auth provider', 'authentication provider', 'openid connect', 'identity provider', 'jit provisioning', 'just-in-time'], category: 'security', subcategory: 'security', weight: 10 },
     { keywords: ['encryption', 'shield', 'platform encryption'], category: 'security', subcategory: 'security', weight: 10 },
     
     // Integration

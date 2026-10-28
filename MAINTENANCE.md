@@ -244,3 +244,28 @@ It covers SSO in one overview page only: detailed SSO, SAML and Auth Provider do
 Salesforce Help (no PDF since the Identity Implementation Guide stub of Winter '22, no machine-readable
 route). Backup before this step: `data/salesforce-docs.db.bak-2026-10-28-pre-security`.
 The manifest change (URL pin and fetch state) is in the uncommitted `docs/manifest.json`.
+
+## Help snapshot: Single Sign-On (2026-10-28)
+
+Detailed SSO documentation (SAML, Auth Providers, OpenID Connect, JIT provisioning, identity
+provider, single logout) exists only in Salesforce Help. 84 articles - the *Single Sign-On* branch
+of "Secure Your Salesforce Org" plus four certificate pages and "Set the My Domain Login Policy" -
+were read in Claude Code's built-in browser and indexed as `help_single_sign_on`
+("Salesforce Help: Single Sign-On (saved 2026-10-28)", security, 423 chunks, each with its Help link).
+"Single Sign-On for Portals and Sites" (`xcloud.sso_sites_portals_about.htm`) rendered blank on
+Help itself and is missing.
+
+- **Live index:** 350 documents; test-search 378/382. Backup before this step:
+  `data/salesforce-docs.db.bak-2026-10-28-pre-help`.
+- **Files:** `docs/help/sso/` (git-ignored, 1.4 MB). Salesforce's content: local use only; keep it out
+  of git and out of any index you share.
+- **Refresh (about yearly, or after a major identity change):** ask Claude to "refresh the SSO Help
+  snapshot". Procedure: open any Help article in the built-in browser with the table of contents
+  visible, run `scripts/help-snapshot-reader.js` in the page, `helpListBranch("Single Sign-On")`,
+  `helpAddArticles(...)` for the extra pages (ids in `docs/help/sso/index.json`, group `related`),
+  `helpStart()`, poll `helpProgress()`, return `helpExport()`, then
+  `npm run import-help-snapshot -- --snapshot sso --title "Salesforce Help: Single Sign-On" <export>`
+  and `npm run build-index -- --changed-only`. Decline non-essential cookies on Help.
+- **Gotchas:** tool calls time out after 45 s, so the reader runs on its own and is polled; a hidden
+  browser pane throttles page timers (45 s per article), so the reader sleeps on a worker timer
+  (about 7 s per article); an article that fails twice is skipped.
