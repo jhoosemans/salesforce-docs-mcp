@@ -129,7 +129,8 @@ function categorizeDocument(fileName: string) {
 
 /** Titles a file name cannot produce */
 const TITLE_OVERRIDES: Record<string, string> = {
-    "apex_api.pdf": "SOAP API Developer Guide"
+    "apex_api.pdf": "SOAP API Developer Guide",
+    "salesforce_security_impl_guide.pdf": "Salesforce Security Guide"
 };
 
 function generateTitle(fileName: string): string {

@@ -235,3 +235,12 @@ the atlas JSON API. Every PDF stays; `salesforce_apex_developer_guide.pdf` is su
 `build-index --changed-only --reindex apex_api`. Intent keywords match whole words, so "ApexClass" no
 longer routes Tooling questions to Apex. test-search 377/382, recency 21/21. Backup before this step:
 `data/salesforce-docs.db.bak-2026-10-28-pre-soap`.
+
+**Update 2026-10-28 (Security Guide):** `salesforce_security_impl_guide.pdf` (Salesforce Security Guide)
+was in the manifest with a dead unversioned URL and never fetched. Winter '27 has no edition yet, so its
+URL is now pinned to Summer '26 (262); the scan fetches a pinned edition that was never captured, and the
+weekly check flags the Winter '27 edition when it appears. Indexed: 349 documents, test-search 378/382.
+It covers SSO in one overview page only: detailed SSO, SAML and Auth Provider docs exist only in
+Salesforce Help (no PDF since the Identity Implementation Guide stub of Winter '22, no machine-readable
+route). Backup before this step: `data/salesforce-docs.db.bak-2026-10-28-pre-security`.
+The manifest change (URL pin and fetch state) is in the uncommitted `docs/manifest.json`.

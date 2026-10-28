@@ -130,6 +130,12 @@ export function classify(
     const pinnedStillServes = fallback?.ok ?? false;
 
     if (!upstreamExists && pinnedStillServes) {
+        // Never captured at all (no release recorded) and pinned to an older edition because the
+        // current one is not out yet: fetch that edition. Legacy documents that live only in the
+        // index have a release and stay frozen.
+        if (!local.exists && !doc.fetchedAt && !doc.release) {
+            return { status: "new-upstream", reason: `no ${target.name} edition yet; pinned edition ${doc.pinnedVersion} published, never downloaded` };
+        }
         return {
             status: "frozen",
             reason: `no ${target.name} edition; pinned ${doc.release ?? "legacy"} edition still served`
