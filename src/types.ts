@@ -139,6 +139,8 @@ export interface SearchResult {
     matchDensity?: number;  // 0-1, how many search terms matched
     highlights?: string[];
     sectionTitle?: string;
+    /** The web page this chunk came from (web guides only) */
+    pageUrl?: string;
     detectedIntent?: {
         category?: string;
         subcategory?: string;

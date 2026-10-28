@@ -33,12 +33,13 @@ import { DatabaseSync } from "node:sqlite";
 import pdfParse from "pdf-parse";
 
 import { chunkText, cleanPdfText } from "../src/utils/chunker.js";
-import { hasFtsIndex, rebuildFtsIndex } from "../src/db/fts.js";
+import { hasFtsIndex, hasTitleColumn, rebuildFtsIndex } from "../src/db/fts.js";
 import { DocCategory, DocType } from "../src/types.js";
 import { makeFilter, parseArgs } from "./lib/args.js";
 import { sha256 } from "./lib/http.js";
 import { estimatedCurrentRelease, releaseFromFileName } from "./lib/release.js";
 import { inspectLocal } from "./lib/local.js";
+import { indexWebGuide, webGuidesNeedingIndex, type WebGuide } from "./lib/web-guides.js";
 import {
     Manifest,
     ManifestDocument,
@@ -55,7 +56,8 @@ const PROJECT_ROOT = join(__dirname, "..");
 const PDF_DIR = join(PROJECT_ROOT, "docs", "pdfs");
 const RELEASE_NOTES_DIR = join(PROJECT_ROOT, "docs", "release-notes");
 const DATA_DIR = join(PROJECT_ROOT, "data");
-const DB_PATH = join(DATA_DIR, "salesforce-docs.db");
+// SF_DOCS_DB builds another index file (e.g. a candidate to compare before going live)
+const DB_PATH = process.env.SF_DOCS_DB || join(DATA_DIR, "salesforce-docs.db");
 const SUPERSEDED_PATH = join(PROJECT_ROOT, "docs", "superseded.json");
 
 // Freshness: a document's weight in search ranking by how many releases it trails the
@@ -293,6 +295,8 @@ const SCHEMA_CHUNKS = `CREATE TABLE IF NOT EXISTS chunks (
     content_lower TEXT NOT NULL,
     section_title TEXT,
     page_number INTEGER,
+    page_url TEXT,
+    search_title TEXT,
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
     UNIQUE(document_id, chunk_index)
 )`;
@@ -323,6 +327,14 @@ function migrateSchema(db: DatabaseSync): void {
         if (!columns.has(name)) {
             console.log(`Migrating schema: adding documents.${name}`);
             db.exec(`ALTER TABLE documents ADD COLUMN ${name} ${type}`);
+        }
+    }
+
+    const chunkColumns = new Set(db.prepare("PRAGMA table_info(chunks)").all().map(row => String(row.name)));
+    for (const name of ["page_url", "search_title"]) {
+        if (!chunkColumns.has(name)) {
+            console.log(`Migrating schema: adding chunks.${name}`);
+            db.exec(`ALTER TABLE chunks ADD COLUMN ${name} TEXT`);
         }
     }
 }
@@ -390,11 +402,19 @@ function stampEditions(db: DatabaseSync, manifest: Manifest | null): number {
     const editions = rows.map(row => editionOf(row.file_name, row.api_version, row.last_updated, byFileName.get(row.file_name)));
     const newest = Math.max(...editions.map(e => e.edition ?? 0));
 
+    // A successor that is not in this index (a web guide not synced on this machine) supersedes nothing
+    const present = new Set(rows.map(row => String(row.file_name)));
     const update = db.prepare("UPDATE documents SET edition = ?, edition_label = ?, superseded_by = ?, freshness = ? WHERE id = ?");
     let changed = 0;
     rows.forEach((row, i) => {
         const { edition, label } = editions[i];
-        const successor = superseded.get(row.file_name) ?? null;
+        // Follow a chain (Dbcom Apex reference -> Apex PDF -> web Apex guide) to the newest present successor
+        let successor: string | null = null;
+        const visited = new Set([String(row.file_name)]);
+        for (let next = superseded.get(row.file_name); next && present.has(next) && !visited.has(next); next = superseded.get(next)) {
+            successor = next;
+            visited.add(next);
+        }
         const behind = edition === null ? 0 : newest - edition;
         const freshness = Math.round(
             Math.max(FRESHNESS_FLOOR, Math.pow(FRESHNESS_DECAY_PER_RELEASE, behind)) * (successor ? SUPERSEDED_FACTOR : 1) * 1000
@@ -406,6 +426,8 @@ function stampEditions(db: DatabaseSync, manifest: Manifest | null): number {
 
     const unknown = [...superseded.keys()].filter(name => !rows.some(row => row.file_name === name));
     if (unknown.length) console.log(`  docs/superseded.json names documents not in the index: ${unknown.join(", ")}`);
+    const absent = [...new Set(superseded.values())].filter(name => !present.has(name));
+    if (absent.length) console.log(`  not superseding anything for successors not in the index: ${absent.join(", ")}`);
     return changed;
 }
 
@@ -492,6 +514,7 @@ async function buildIndex(): Promise<void> {
 
     let db: DatabaseSync;
     let targets: Array<{ path: string; doc: ManifestDocument | undefined }>;
+    let webTargets: WebGuide[];
 
     if (changedOnly) {
         if (dryRun) {
@@ -505,9 +528,10 @@ async function buildIndex(): Promise<void> {
 
         const changed = selectChangedDocuments(manifest!, db, filter);
         targets = changed.map(doc => ({ path: documentPath(doc), doc }));
+        webTargets = webGuidesNeedingIndex(db, filter);
 
         console.log(`Indexed documents:  ${db.prepare("SELECT COUNT(*) AS n FROM documents").get()!.n}`);
-        console.log(`Needing reindex:    ${targets.length}`);
+        console.log(`Needing reindex:    ${targets.length}${webTargets.length ? ` PDFs, ${webTargets.length} web guides` : ""}`);
     } else {
         db = dryRun ? new DatabaseSync(":memory:") : openForWriting(tmpPath);
         console.log("Creating schema...");
@@ -527,12 +551,15 @@ async function buildIndex(): Promise<void> {
             .filter(path => filter(basename(path).replace(/\.pdf$/i, "")))
             .map(path => ({ path, doc: byFileName.get(basename(path)) }));
         console.log(`Found ${targets.length} PDF files`);
+        webTargets = webGuidesNeedingIndex(db, filter);
+        if (webTargets.length) console.log(`Found ${webTargets.length} web guides`);
     }
 
     if (dryRun) {
-        if (targets.length) {
+        if (targets.length || webTargets.length) {
             console.log("\nWould index:");
             for (const target of targets) console.log(`  ${basename(target.path)}`);
+            for (const guide of webTargets) console.log(`  ${guide.fileName} (web pages)`);
         } else {
             console.log("\nNothing to index.");
         }
@@ -541,7 +568,7 @@ async function buildIndex(): Promise<void> {
         return;
     }
 
-    if (!targets.length) {
+    if (!targets.length && !webTargets.length) {
         console.log("\nNothing to index.");
         if (changedOnly) console.log("The index is up to date with the manifest.");
         let changed = false;
@@ -555,8 +582,9 @@ async function buildIndex(): Promise<void> {
             console.log(`  stamped edition and freshness on ${restamped} documents`);
             changed = true;
         }
-        // An index built before full-text search gets one without re-parsing any PDF
-        if (!hasFtsIndex(db)) {
+        // An index built before full-text search (or before its title column) gets one
+        // without re-parsing any PDF
+        if (!hasFtsIndex(db) || !hasTitleColumn(db)) {
             buildFts(db);
             changed = true;
         }
@@ -567,7 +595,7 @@ async function buildIndex(): Promise<void> {
         return;
     }
 
-    console.log("\nProcessing PDFs...");
+    console.log(targets.length ? "\nProcessing PDFs..." : "\nProcessing web guides...");
     let successCount = 0;
     let failCount = 0;
     const indexedAt = new Date().toISOString();
@@ -577,6 +605,22 @@ async function buildIndex(): Promise<void> {
             successCount++;
             if (target.doc) target.doc.indexedAt = indexedAt;
         } else {
+            failCount++;
+        }
+    }
+
+    for (const guide of webTargets) {
+        const started = Date.now();
+        db.exec("SAVEPOINT web_guide");
+        try {
+            const { pages, chunks } = indexWebGuide(db, guide);
+            db.exec("RELEASE web_guide");
+            console.log(`  ${guide.fileName}: ${pages} pages -> ${chunks} chunks (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+            successCount++;
+        } catch (error) {
+            db.exec("ROLLBACK TO web_guide");
+            db.exec("RELEASE web_guide");
+            console.error(`  ${guide.fileName}: ${error instanceof Error ? error.message : error}`);
             failCount++;
         }
     }

@@ -1,5 +1,6 @@
 /**
- * Scan Salesforce's documentation CDN for new and updated PDFs.
+ * Scan Salesforce's documentation CDN for new and updated PDFs, and the guides read as web
+ * pages (scripts/lib/web-guides.ts) for a new release or a changed page list.
  *
  * Read-only: this never writes the manifest, never touches docs/, and never
  * downloads a PDF body. It asks the CDN for validators (ETag, Last-Modified,
@@ -40,6 +41,7 @@ import {
     scanDocuments,
     summarize
 } from "./lib/scan.js";
+import { checkWebGuides } from "./lib/web-guides.js";
 
 /** How many past releases to look for undiscovered release notes in. */
 const RELEASE_NOTES_LOOKBACK = 6;
@@ -134,6 +136,7 @@ function report(findings: Finding[], target: Release, verbose: boolean): void {
     console.log(`${actionable} documents would be fetched. Next:`);
     console.log("  npm run sync-docs -- --dry-run      # confirm the plan");
     console.log("  npm run sync-docs                   # download them");
+    console.log("  npm run sync-web                    # web guides (or: npm run update-docs for all)");
     console.log("  npm run build-index -- --changed-only");
     process.exitCode = 3;
 }
@@ -188,6 +191,11 @@ async function main(): Promise<void> {
     // Release notes for new releases are additions, not changes - find them separately.
     if (!args.values.get("only") && args.values.get("kind") !== "developer_guide") {
         findings.push(...(await discoverReleaseNotes(manifest, target, RELEASE_NOTES_LOOKBACK)));
+    }
+
+    // Web guides: one request each; page edits inside a release show up only on sync-web
+    if (args.values.get("kind") !== "release_notes") {
+        findings.push(...(await checkWebGuides(target, makeFilter(args.values.get("only")))));
     }
 
     report(findings, target, verbose);

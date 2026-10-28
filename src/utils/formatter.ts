@@ -42,7 +42,7 @@ Try:
 
     for (let i = 0; i < results.length; i++) {
         const result = results[i];
-        const { document, chunk, score, sectionTitle, matchDensity } = result;
+        const { document, chunk, score, sectionTitle, pageUrl, matchDensity } = result;
         
         lines.push(`### ${i + 1}. ${document.title}`);
         lines.push(`**Document ID:** ${document.id}`);
@@ -54,6 +54,7 @@ Try:
         if (sectionTitle) {
             lines.push(`**Section:** ${sectionTitle}`);
         }
+        if (pageUrl) lines.push(`**Page:** ${pageUrl}`);
         
         if (document.subcategory) {
             lines.push(`**Subcategory:** ${document.subcategory}`);
@@ -215,7 +216,7 @@ Try:
     ];
 
     for (const result of results) {
-        const { document, chunk, sectionTitle } = result;
+        const { document, chunk, sectionTitle, pageUrl } = result;
         
         lines.push(`### From: ${document.title}`);
         const edition = formatEdition(document);
@@ -223,6 +224,7 @@ Try:
         if (sectionTitle) {
             lines.push(`**Section:** ${sectionTitle}`);
         }
+        if (pageUrl) lines.push(`**Page:** ${pageUrl}`);
         lines.push("");
         
         // Extract code blocks if present, otherwise show content

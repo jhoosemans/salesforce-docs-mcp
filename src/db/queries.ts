@@ -13,7 +13,7 @@ import {
 } from "../types.js";
 import { LRUCache } from "lru-cache";
 import { detectIntent, describeIntent } from "../utils/intent.js";
-import { FTS_TABLE, hasFtsIndex, toFtsQuery } from "./fts.js";
+import { FTS_TABLE, TITLE_WEIGHT, hasFtsIndex, hasTitleColumn, toFtsQuery } from "./fts.js";
 
 // Search result cache
 const searchCache = new LRUCache<string, SearchResult[]>({
@@ -43,8 +43,7 @@ function sanitizeQuery(query: string): string {
  * BM25 is negative (more negative = better), so a larger multiplier ranks higher.
  */
 const PRIORITY_FACTOR = `(1 + (d.priority - 5) * 0.05)`;
-const RANK_BY_RELEVANCE = `bm25(${FTS_TABLE}) * ${PRIORITY_FACTOR}`;
-const RANK_WITH_FRESHNESS = `${RANK_BY_RELEVANCE} * COALESCE(d.freshness, 1)`;
+const FRESHNESS_FACTOR = `COALESCE(d.freshness, 1)`;
 
 // "Spring '22", "summer 24", "Winter_27": the question is about that release, so
 // its age must not count against it
@@ -58,6 +57,8 @@ const ALL_TERMS_BONUS = 2;
 
 let ftsChecked = false;
 let hasFreshness = false;
+// Indexes built before web guides have no title column and no page URLs
+let hasTitles = false;
 
 /**
  * Search documents using intent-based filtering over the full-text index
@@ -78,6 +79,7 @@ export async function searchDocuments(
             throw new Error("Search failed: the index has no full-text index yet. Run: npm run build-index -- --changed-only");
         }
         hasFreshness = db.prepare(`SELECT 1 FROM pragma_table_info('documents') WHERE name = 'freshness'`).get() !== undefined;
+        hasTitles = hasTitleColumn(db);
         ftsChecked = true;
     }
     const sanitizedQuery = sanitizeQuery(query);
@@ -117,7 +119,9 @@ export async function searchDocuments(
     
     const maxResults = options.maxResults || 5;
     const ftsQuery = toFtsQuery(sanitizedQuery);
-    const rankExpression = hasFreshness && !namesRelease ? RANK_WITH_FRESHNESS : RANK_BY_RELEVANCE;
+    // A title match (web-page section titles) counts TITLE_WEIGHT times a body match
+    const relevance = `bm25(${FTS_TABLE}${hasTitles ? `, 1.0, ${TITLE_WEIGHT}` : ""}) * ${PRIORITY_FACTOR}`;
+    const rankExpression = hasFreshness && !namesRelease ? `${relevance} * ${FRESHNESS_FACTOR}` : relevance;
     const editionColumns = hasFreshness ? `d.edition, d.edition_label, d.superseded_by, d.freshness` : `NULL AS edition, NULL AS edition_label, NULL AS superseded_by, NULL AS freshness`;
     
     if (!ftsQuery) {
@@ -137,7 +141,7 @@ export async function searchDocuments(
             SELECT 
                 c.id AS chunk_id, d.id, d.file_name, d.file_path, d.category, d.subcategory,
                 d.doc_type, d.title, d.description, d.keywords, d.api_version, d.priority, ${editionColumns},
-                c.content, c.section_title, c.page_number,
+                c.content, c.section_title, c.page_number, ${hasTitles ? "c.page_url" : "NULL AS page_url"},
                 ${rankExpression} AS rank
             FROM ${FTS_TABLE}
             JOIN chunks c ON c.id = ${FTS_TABLE}.rowid
@@ -219,6 +223,7 @@ export async function searchDocuments(
                 score: Math.round(-row.rank * 100) / 100,
                 matchDensity,
                 sectionTitle: row.section_title as string,
+                pageUrl: row.page_url ?? undefined,
                 highlights: extractHighlights(content, sanitizedQuery),
                 detectedIntent: usedIntentFilter ? {
                     category: intent.category,

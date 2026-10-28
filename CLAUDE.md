@@ -20,7 +20,8 @@ npm run dev              # run the server from source (tsx)
 
 npm run check-updates                    # read-only CDN diff vs docs/manifest.json; exit 3 = updates
 npm run sync-docs -- --dry-run           # plan + MB total; --only apex,lwc / --kind release_notes
-npm run update-docs                      # sync-docs, then build-index --changed-only
+npm run sync-web -- --dry-run            # web guides (LWC, Apex dev, Apex reference): page counts, no download
+npm run update-docs                      # sync-docs, sync-web, then build-index --changed-only
 npm run build-index                      # full rebuild from PDFs on disk; --changed-only for incremental.
                                          # Refuses to replace a bigger live index (--allow-shrink):
                                          # the live index holds legacy documents whose PDF isn't here
@@ -44,7 +45,8 @@ index DDL in `src/db/fts.ts`) → LRU cache. Chunks come from `src/utils/chunker
 `src/utils/classifier.ts` maps filenames to category/doc_type/priority. Design doc: `MCP_ARCHITECTURE.md`.
 
 **Corpus** (`docs/`, git-ignored): `docs/pdfs` (developer guides), `docs/release-notes`,
-`docs/help-products`. Regenerable from Salesforce; never versioned (see LFS gotcha).
+`docs/help-products`, and `docs/pages/<guide>` (web-page guides). Regenerable from Salesforce; never
+versioned (see LFS gotcha).
 
 **Pipeline** (`scripts/` + `scripts/lib/`): `docs/manifest.json` (tracked) is the source of truth —
 one entry per document with source URL, provenance, release/API version, ETag/size/sha256,
@@ -54,6 +56,15 @@ they cannot disagree. `lib/release.ts` is the release calendar (docs version ↔
 `lib/http.ts` is the only place HTTP happens. `build-index --changed-only` indexes entries with
 `fetchedAt > indexedAt`, stamps `documents.api_version / last_updated / source_url / sha256`, and
 migrates older DBs in place.
+
+**Web guides** (`scripts/lib/web-guides.ts`, `sync-web`): guides read as pages instead of PDFs - LWC
+(Markdown from `/docs/llms-lwc.txt`), Apex Developer and Apex Reference (atlas JSON API). State in
+`docs/web-guides.json` (tracked: release, page count, page-list and content hashes). `check-updates`
+adds one request per guide (new release or changed page list); `sync-web` downloads every page and
+re-indexes a guide only when its content hash changed. Each guide is one document; chunks are page
+sections with `page_url` and `search_title`, which `chunks_fts` weights `TITLE_WEIGHT` x above body
+text. A PDF a web guide replaces is superseded in `docs/superseded.json`, never deleted, and only
+while its successor is in the index.
 
 Decisions already made — don't re-litigate: developer guides replace in place, release notes
 accumulate; retired documents stay in the index (`--prune` exists, default off); frozen legacy docs
@@ -76,6 +87,11 @@ are kept at their pinned edition; the check is read-only and the scheduled job o
 - **`chunks_fts` is an external-content FTS5 index**: it does not follow `chunks` by itself.
   `build-index` rebuilds it (~2 s) after every write; any other script that changes `chunks` must too.
   Never build FTS queries by hand: `toFtsQuery()` quotes every term, so user input is never FTS5 syntax.
+- **developer.salesforce.com ignores conditional requests** (If-None-Match answers 200) and LWC pages
+  carry the deploy time as Last-Modified: a page edit is only visible by downloading the page.
+  Its HTML pages answer 403 to scripts; fetch only the `.md` pages and the JSON API. It rate-limits
+  with 403s (about 16 requests/s was blocked, about 4/s was fine): `lib/web-guides.ts` spaces every
+  request 500 ms apart across workers (a full sync takes about 30 min) and stops a guide that stays blocked after a 60 s pause.
 - `scripts/download-from-salesforce.mjs` and `scripts/refresh-docs.sh` are the superseded, destructive
   path (delete-on-failure). Don't run or extend them.
 - `scripts/final-download-*.ps1` are not run; they survive only as the URL lists `build-manifest` parses.

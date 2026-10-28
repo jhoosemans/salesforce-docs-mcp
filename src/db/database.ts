@@ -89,6 +89,8 @@ export async function initializeDatabase(): Promise<void> {
             content_lower TEXT NOT NULL,
             section_title TEXT,
             page_number INTEGER,
+            page_url TEXT,
+            search_title TEXT,
             FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
             UNIQUE(document_id, chunk_index)
         )

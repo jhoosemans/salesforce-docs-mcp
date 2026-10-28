@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "guides": {
+    "lwc": {
+      "title": "Lightning Web Components Developer Guide",
+      "fileName": "web_lwc_developer_guide",
+      "release": "Winter '27",
+      "apiVersion": "68.0",
+      "docVersion": null,
+      "pageCount": 689,
+      "pageListHash": "d34cdda0110cd06ff641a894325c3e8de629402b9bbd9d5f20317cc13baaccec",
+      "contentHash": "89e18f6c0c6f79f44215860ed056833c7d80df51c6d89aefeb9402d9fe4c9651",
+      "fetchedAt": "2026-10-28T06:13:21.040Z"
+    },
+    "apexcode": {
+      "title": "Apex Developer Guide",
+      "fileName": "web_apex_developer_guide",
+      "release": "Winter '27",
+      "apiVersion": "68.0",
+      "docVersion": "264.0",
+      "pageCount": 548,
+      "pageListHash": "467143015732a0e3109277a9a479d6f036ea2a0fb9706700b151c7e81a2e6187",
+      "contentHash": "3f6fcbc0a0c4437b2612faa28e8de350d20c67eee9ff0a9ebe6b960883bb93d9",
+      "fetchedAt": "2026-10-28T06:17:55.667Z"
+    },
+    "apexref": {
+      "title": "Apex Reference Guide",
+      "fileName": "web_apex_reference_guide",
+      "release": "Winter '27",
+      "apiVersion": "68.0",
+      "docVersion": "264.0",
+      "pageCount": 2329,
+      "pageListHash": "f70b10c1b38293e8c5a012036ff4fff2f2e5406decb8602c66566f5f8566e915",
+      "contentHash": "65831638181924241e32c09886b8797437d9a2dc6938139028e4bea69cf71a98",
+      "fetchedAt": "2026-10-28T06:37:20.666Z"
+    }
+  }
+}

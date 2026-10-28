@@ -120,6 +120,10 @@
     {
       "document": "servicesdk_220_service_sdk_ios.pdf",
       "supersededBy": "servicesdk_222_service_sdk_ios.pdf"
+    },
+    {
+      "document": "salesforce_apex_developer_guide.pdf",
+      "supersededBy": "web_apex_developer_guide"
     }
   ]
 }

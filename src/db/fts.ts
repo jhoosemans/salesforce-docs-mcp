@@ -9,17 +9,31 @@ export const FTS_TABLE = "chunks_fts";
 // External-content index: the text lives once, in chunks; FTS5 stores only the index.
 // porter: "updates" finds "update". unicode61 splits on punctuation, so the query
 // "Database.executeBatch" becomes the phrase "database executebatch".
+// search_title holds the "Page › Section" title of web-page chunks (NULL for PDF chunks, whose
+// detected section titles are mostly noise such as "EDITIONS"); bm25 weights it above content.
 const FTS_SCHEMA = `CREATE VIRTUAL TABLE IF NOT EXISTS ${FTS_TABLE} USING fts5(
     content,
+    search_title,
     content='chunks',
     content_rowid='id',
     tokenize='porter unicode61 remove_diacritics 2'
 )`;
 
-/** Create the index if missing and rebuild it from chunks (seconds for the whole corpus). */
+/** bm25 weight of a title match relative to a body match */
+export const TITLE_WEIGHT = 4;
+
+/**
+ * Create the index if missing (or recreate one from before search_title) and rebuild it from
+ * chunks (seconds for the whole corpus). chunks must have the search_title column.
+ */
 export function rebuildFtsIndex(db: DatabaseSync): void {
+    if (hasFtsIndex(db) && !hasTitleColumn(db)) db.exec(`DROP TABLE ${FTS_TABLE}`);
     db.exec(FTS_SCHEMA);
     db.exec(`INSERT INTO ${FTS_TABLE}(${FTS_TABLE}) VALUES('rebuild')`);
+}
+
+export function hasTitleColumn(db: DatabaseSync): boolean {
+    return db.prepare(`SELECT 1 FROM pragma_table_info('${FTS_TABLE}') WHERE name = 'search_title'`).get() !== undefined;
 }
 
 export function hasFtsIndex(db: DatabaseSync): boolean {

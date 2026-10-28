@@ -209,3 +209,23 @@ rejects it — both are dropped silently and never appear in Notification settin
 `docs/help-products/sales_agents.pdf` (LFS pointer) are junk, retired upstream, skipped by the index —
 safe to delete. `get_release_notes` with `release: "Summer 26"` returns Spring '07: pre-existing
 server bug in release-name matching, not touched. Rollback DB: `data/salesforce-docs.db.bak-2026-09-13`.
+
+## Web guides (2026-10-28)
+
+Three guides are now read as web pages next to the PDFs (PRD_SEARCH_V2.md, phase 3): LWC Developer
+Guide (689 pages, Markdown), Apex Developer Guide (548) and Apex Reference Guide (2,329), both from
+the atlas JSON API. Every PDF stays; `salesforce_apex_developer_guide.pdf` is superseded by
+`web_apex_developer_guide` in `docs/superseded.json` (remove that line to undo).
+
+- **Live index:** 348 documents, 151,666 chunks, 543 MB. Backup before the change:
+  `data/salesforce-docs.db.bak-2026-10-28-pre-web` (restore by copying it over `data/salesforce-docs.db`
+  and restarting Claude Code sessions).
+- **test-search:** 375/382 (original suite 356/361, recency 19/21); median 2 ms, max 131 ms.
+- **Weekly check:** `check-updates` adds one request per guide and reports a new release or a changed
+  page list. Page edits within a release are not visible without downloading, so they are picked up
+  by `npm run update-docs` (which now runs `sync-web`): about 30 minutes for all 3,566 pages,
+  re-indexing only guides whose content changed.
+- **Rate limit:** developer.salesforce.com blocked us with 403s for about 30 minutes at ~16 requests/s.
+  `sync-web` now spaces requests 500 ms apart and stops a guide that stays blocked; failed pages keep
+  their previous copy. If a sync reports "rate-limited", re-run it later.
+- **State:** `docs/web-guides.json` (tracked) and `docs/pages/` (git-ignored page cache, 32 MB).

@@ -99,3 +99,80 @@ export function splitSections(pageTitle: string, text: string): PageSection[] {
     flush();
     return sections;
 }
+
+/** A fenced code block up to this size stays in one chunk even when it exceeds the chunk size. */
+const MAX_CODE_BLOCK = 4000;
+
+/**
+ * Split section text into chunks of about `max` characters on paragraph boundaries,
+ * keeping each fenced code block whole. Only a code block over MAX_CODE_BLOCK is cut, on line
+ * boundaries, and every piece is re-fenced so it still reads as code.
+ */
+export function packChunks(text: string, max: number): string[] {
+    const blocks: string[] = [];
+    let fence: string[] | null = null;
+    let paragraph: string[] = [];
+    const endParagraph = () => {
+        if (paragraph.length) blocks.push(paragraph.join("\n"));
+        paragraph = [];
+    };
+    for (const line of text.split("\n")) {
+        if (fence) {
+            fence.push(line);
+            if (line.startsWith("```")) {
+                blocks.push(fence.join("\n"));
+                fence = null;
+            }
+        } else if (line.startsWith("```")) {
+            endParagraph();
+            fence = [line];
+        } else if (line.trim() === "") {
+            endParagraph();
+        } else {
+            paragraph.push(line);
+        }
+    }
+    if (fence) blocks.push(fence.join("\n"));
+    endParagraph();
+
+    const pieces = blocks.flatMap(block => splitBlock(block, max));
+    const chunks: string[] = [];
+    let current = "";
+    for (const piece of pieces) {
+        if (current && current.length + piece.length + 2 > max) {
+            chunks.push(current);
+            current = piece;
+        } else {
+            current = current ? `${current}\n\n${piece}` : piece;
+        }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+}
+
+function splitBlock(block: string, max: number): string[] {
+    const isCode = block.startsWith("```");
+    if (block.length <= (isCode ? MAX_CODE_BLOCK : max)) return [block];
+    const lines = block.split("\n");
+    const open = isCode ? lines.shift()! : "";
+    if (isCode && lines[lines.length - 1]?.startsWith("```")) lines.pop();
+    const limit = isCode ? MAX_CODE_BLOCK : max;
+
+    const pieces: string[] = [];
+    let current: string[] = [];
+    let size = 0;
+    const emit = () => {
+        if (current.length) pieces.push(isCode ? [open, ...current, "```"].join("\n") : current.join("\n"));
+        current = [];
+        size = 0;
+    };
+    // A prose line longer than the limit is cut on spaces
+    const units = isCode ? lines : lines.flatMap(line => line.length <= limit ? [line] : line.match(new RegExp(`.{1,${limit}}(\\s|$)`, "g")) ?? [line]);
+    for (const unit of units) {
+        if (size + unit.length + 1 > limit) emit();
+        current.push(unit);
+        size += unit.length + 1;
+    }
+    emit();
+    return pieces;
+}
